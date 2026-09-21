@@ -1,0 +1,142 @@
+.rain-section {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border-top: 8px solid #2563eb;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.rain-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.rain-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rain-icon {
+    color: #2563eb;
+}
+
+.rain-title {
+    font-size: 1.25rem;
+    color: #0f172a;
+    margin: 0;
+    font-weight: 700;
+}
+
+.rain-status-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rain-status-badge.not-raining {
+    background-color: #f1f5f9;
+    color: #64748b;
+}
+
+.rain-status-badge.raining {
+    background-color: #dbeafe;
+    color: #2563eb;
+}
+
+.rain-station {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin: 0 0 32px 0;
+}
+
+.tubes-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 32px;
+    padding: 0 10px;
+}
+
+.tube-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.tube {
+    position: relative;
+    width: 48px;
+    height: 240px;
+    background-color: #e0f2fe;
+    border-radius: 24px;
+    border: 1px solid #bae6fd;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+}
+
+.tube-fill {
+    width: 100%;
+    background-color: #2563eb;
+    transition: height 0.8s ease-out;
+    border-radius: 0 0 24px 24px;
+}
+
+.tube-fill[style*="height: 100"],
+.tube-fill[style*="height: 99"],
+.tube-fill[style*="height: 98"] {
+    border-radius: 24px;
+}
+
+.tick-mark {
+    position: absolute;
+    width: 8px;
+    height: 1px;
+    background-color: #38bdf8;
+    left: 6px;
+    z-index: 10;
+}
+
+.tube-labels {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tube-value {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.tube-value .unit {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-left: 2px;
+}
+
+.tube-period {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0284c7;
+}
+
+.rain-footer {
+    font-size: 0.8rem;
+    color: #64748b;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 16px;
+    margin: auto 0 0 0;
+}

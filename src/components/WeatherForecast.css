@@ -1,0 +1,195 @@
+.forecast-section {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    margin-top: 2rem;
+    border: 1px solid #e2e8f0;
+}
+
+.forecast-header {
+    margin-bottom: 24px;
+}
+
+.section-subtitle {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin-top: 4px;
+}
+
+.forecast-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - (6 * 16px)) / 7);
+
+    gap: 16px;
+    padding: 16px 4px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+}
+
+.forecast-grid::-webkit-scrollbar {
+    height: 8px;
+}
+.forecast-grid::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+.forecast-grid::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+.forecast-grid::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+@media (max-width: 1300px) {
+    .forecast-grid {
+        grid-auto-columns: calc((100% - (4 * 16px)) / 5);
+    }
+}
+
+@media (max-width: 900px) {
+    .forecast-grid {
+        grid-auto-columns: calc((100% - (2 * 16px)) / 3);
+    }
+}
+
+@media (max-width: 500px) {
+    .forecast-grid {
+        grid-auto-columns: calc((100% - (1 * 16px)) / 2);
+    }
+}
+
+.forecast-card {
+    position: relative;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.forecast-card.is-past {
+    opacity: 0.6;
+    filter: grayscale(100%);
+    background: #f1f5f9;
+}
+
+.forecast-card.is-today {
+    transform: scale(1.05);
+    box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.25);
+    border-color: #3b82f6;
+    background: #ffffff;
+    z-index: 10;
+}
+
+.today-label {
+    position: absolute;
+    top: -12px;
+    background-color: #3b82f6;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 12px;
+    letter-spacing: 1px;
+}
+
+.border-top-normal { border-top: 4px solid #10b981; }
+.border-top-watch { border-top: 4px solid #f59e0b; }
+.border-top-warning { border-top: 4px solid #f97316; }
+.border-top-danger { border-top: 4px solid #ef4444; }
+
+.day-header {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.day-name {
+    font-size: 1.1rem;
+    color: #0f172a;
+    margin: 0 0 4px 0;
+}
+
+.day-date {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.weather-icon-wrapper {
+    margin-bottom: 16px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-yellow-500 { color: #eab308; }
+.text-gray-400 { color: #9ca3af; }
+.text-blue-500 { color: #3b82f6; }
+.text-indigo-600 { color: #4f46e5; }
+
+.temperature-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 16px;
+    font-weight: bold;
+}
+
+.temp-max { color: #0f172a; font-size: 1.25rem; }
+.temp-divider { color: #94a3b8; font-size: 0.9rem; }
+.temp-min { color: #64748b; font-size: 1.1rem; }
+
+.rain-details {
+    width: 100%;
+    background: #ffffff;
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 16px;
+    border: 1px solid #e2e8f0;
+}
+
+.is-past .rain-details {
+    background: #f8fafc;
+}
+
+.rain-stat {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+}
+.rain-stat:last-child {
+    margin-bottom: 0;
+}
+
+.stat-label { color: #64748b; }
+.stat-value { color: #0f172a; font-weight: 600; }
+
+.day-footer {
+    width: 100%;
+    margin-top: auto;
+}
+
+.severity-badge {
+    display: block;
+    text-align: center;
+    width: 100%;
+    padding: 6px 0;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge-normal { background-color: #d1fae5; color: #065f46; }
+.badge-watch { background-color: #fef3c7; color: #92400e; }
+.badge-warning { background-color: #ffedd5; color: #9a3412; }
+.badge-danger { background-color: #fee2e2; color: #991b1b; }

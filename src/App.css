@@ -1,0 +1,102 @@
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f1f5f9;
+}
+
+@media (min-width: 768px) {
+  .app-container { flex-direction: row; }
+}
+
+.sidebar {
+  background-color: #1e293b;
+  color: white;
+  padding: 1rem;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .sidebar { width: 260px; min-height: 100vh; }
+}
+
+.logo-container h2 {
+  font-size: 1.2rem;
+  text-align: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid #334155;
+  margin-bottom: 1rem;
+}
+
+.nav-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+.nav-list a {
+  display: block;
+  padding: 0.75rem 1rem;
+  color: #cbd5e1;
+  text-decoration: none;
+  border-radius: 6px;
+}
+.nav-list a:hover, .nav-list a.active { background-color: #3b82f6; color: white; }
+
+.main-content {
+  flex: 1;
+  padding: 1.5rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 1024px) {
+  .main-content { padding: 2.5rem; }
+}
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2rem;
+  gap: 1rem;
+
+  min-height: 260px;
+  padding: 2.5rem;
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.header-titles h1 {
+  font-size: 2rem;
+  color: white;
+  margin-bottom: 0.25rem;
+}
+
+.header-titles .subtitle {
+  color: #cbd5e1;
+  font-size: 1.1rem;
+}
+
+.global-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  color: white;
+}
+.badge-normal { background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold; }
+.section-title { font-size: 1.25rem; color: #334155; margin-bottom: 1.5rem; }
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="hydroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+  </defs>
+  <path d="M16 2L4 7v8c0 7.18 5.06 13.88 12 15.5 6.94-1.62 12-8.32 12-15.5V7l-12-5z" fill="url(#hydroGrad)" />
+  <path d="M16 9c0 0-4 4.5-4 7.5a4 4 0 0 0 8 0c0-3-4-7.5-4-7.5z" fill="#ffffff" />
+</svg>
