@@ -1,0 +1,92 @@
+.hg-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.hg-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* Tamanhos */
+.hg-btn-sm {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    border-radius: var(--radius-sm);
+    gap: 4px;
+}
+
+.hg-btn-md {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+}
+
+.hg-btn-lg {
+    padding: 12px 20px;
+    font-size: 1rem;
+}
+
+.hg-btn-full {
+    width: 100%;
+}
+
+/* Variantes */
+.hg-btn-primary {
+    background-color: var(--brand-primary);
+    color: #ffffff;
+}
+
+.hg-btn-primary:hover:not(:disabled) {
+    background-color: var(--brand-primary-hover);
+}
+
+.hg-btn-dark {
+    background-color: var(--color-bg-dark);
+    color: #ffffff;
+}
+
+.hg-btn-dark:hover:not(:disabled) {
+    background-color: var(--color-bg-dark-elevated);
+}
+
+.hg-btn-success {
+    background-color: #059669;
+    color: #ffffff;
+}
+
+.hg-btn-success:hover:not(:disabled) {
+    background-color: #047857;
+}
+
+.hg-btn-danger-soft {
+    background-color: var(--status-critical-bg);
+    color: var(--status-critical-text);
+    border-color: var(--status-critical-border);
+}
+
+.hg-btn-danger-soft:hover:not(:disabled) {
+    background-color: var(--status-critical-fg);
+    color: #ffffff;
+    border-color: var(--status-critical-fg);
+}
+
+.hg-btn-outline {
+    background-color: var(--color-bg-subtle);
+    color: var(--color-text-secondary);
+    border-color: var(--color-border-strong);
+}
+
+.hg-btn-outline:hover:not(:disabled) {
+    background-color: var(--color-border-default);
+    color: var(--color-text-primary);
+}

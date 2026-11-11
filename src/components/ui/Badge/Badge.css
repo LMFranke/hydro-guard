@@ -1,0 +1,75 @@
+.hg-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid transparent;
+    line-height: 1.2;
+}
+
+.hg-badge-block {
+    display: flex;
+    width: 100%;
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+}
+
+/* Variantes Suaves (Cards, Alertas, Previsão) */
+.hg-badge-normal {
+    background-color: var(--status-normal-bg);
+    color: var(--status-normal-text);
+    border-color: var(--status-normal-border);
+}
+
+.hg-badge-watch {
+    background-color: var(--status-watch-bg);
+    color: var(--status-watch-text);
+    border-color: var(--status-watch-border);
+}
+
+.hg-badge-warning {
+    background-color: var(--status-warning-bg);
+    color: var(--status-warning-text);
+    border-color: var(--status-warning-border);
+}
+
+.hg-badge-critical,
+.hg-badge-danger {
+    background-color: var(--status-critical-bg);
+    color: var(--status-critical-text);
+    border-color: var(--status-critical-border);
+}
+
+.hg-badge-below {
+    background-color: var(--status-below-bg);
+    color: var(--status-below-text);
+    border-color: var(--status-below-border);
+}
+
+.hg-badge-neutral {
+    background-color: var(--color-bg-app);
+    color: var(--color-text-muted);
+    border-color: var(--color-border-default);
+}
+
+/* Variantes Sólidas (Header Global da Cidade) */
+.hg-badge-solid-normal {
+    background-color: var(--status-normal-fg);
+    color: #ffffff;
+}
+
+.hg-badge-solid-warning {
+    background-color: #f59e0b;
+    color: #ffffff;
+}
+
+.hg-badge-solid-critical {
+    background-color: var(--status-critical-fg);
+    color: #ffffff;
+}

@@ -1,0 +1,44 @@
+.hg-page-status-box {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-lg);
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: var(--color-text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.hg-page-status-box h3 {
+    color: var(--color-text-primary);
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.hg-page-status-box p {
+    font-size: 0.95rem;
+    max-width: 480px;
+    margin: 0;
+}
+
+.hg-spinner-icon {
+    color: var(--brand-primary);
+    animation: hgSpin 1.2s linear infinite;
+}
+
+@keyframes hgSpin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.hg-dashboard-section-header {
+    margin-bottom: 1.25rem;
+}

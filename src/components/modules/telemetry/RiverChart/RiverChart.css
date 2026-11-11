@@ -1,0 +1,57 @@
+.hg-chart-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    gap: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.hg-chart-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.hg-chart-title::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 24px;
+    background-color: var(--brand-primary);
+    border-radius: 4px;
+}
+
+.hg-river-select {
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-subtle);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    outline: none;
+    cursor: pointer;
+    min-width: 220px;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.hg-river-select:hover {
+    border-color: var(--color-text-subtle);
+}
+
+.hg-river-select:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px var(--brand-primary-ring);
+}
+
+.hg-chart-container {
+    width: 100%;
+    height: 400px;
+}

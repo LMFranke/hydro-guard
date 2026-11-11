@@ -1,0 +1,277 @@
+.hg-map-section.is-maximized {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-fullscreen-map);
+    margin: 0;
+    border-radius: 0;
+    border: none;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 24px;
+    background-color: var(--color-bg-surface);
+}
+
+.hg-map-section.is-maximized .hg-section-header {
+    margin-bottom: 12px;
+}
+
+.hg-map-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.hg-map-wrapper {
+    position: relative;
+    width: 100%;
+    height: 750px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--color-border-strong);
+    box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.1);
+}
+
+.hg-map-section.is-maximized .hg-map-wrapper {
+    flex: 1;
+    height: 100%;
+}
+
+.hg-map-wrapper.picking-mode {
+    cursor: crosshair;
+}
+
+.hg-leaflet-container {
+    width: 100%;
+    height: 100%;
+    z-index: var(--z-map);
+}
+
+/* Botão flutuante de tela cheia sobre o mapa */
+.hg-map-fullscreen-fab {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 800;
+    background-color: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition: all 0.2s ease;
+}
+
+.hg-map-fullscreen-fab:hover {
+    background-color: var(--color-bg-dark);
+    color: #ffffff;
+    border-color: var(--color-bg-dark);
+}
+
+.hg-map-overlay-legend {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 800;
+    background-color: var(--color-bg-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    width: 165px;
+    overflow: hidden;
+    border: 1px solid var(--color-border-default);
+}
+
+.hg-legend-header {
+    background-color: var(--color-bg-dark);
+    color: #ffffff;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.hg-legend-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.hg-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+
+.hg-legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+}
+
+.hg-map-overlay-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 800;
+    background-color: var(--color-bg-surface);
+    padding: 6px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--color-border-default);
+}
+
+.hg-controls-group {
+    display: flex;
+    gap: 4px;
+}
+
+.hg-layer-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border: none;
+    background: transparent;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.hg-layer-btn:hover {
+    background-color: var(--color-bg-app);
+    color: var(--color-text-primary);
+}
+
+.hg-layer-btn.active-flood {
+    background-color: var(--status-below-bg);
+    color: var(--status-below-text);
+}
+
+.hg-layer-btn.active-landslide {
+    background-color: var(--status-warning-bg);
+    color: #d97706;
+}
+
+.hg-map-popup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 190px;
+}
+
+.hg-map-popup strong {
+    font-size: 1rem;
+    color: var(--color-text-primary);
+}
+
+.hg-map-popup p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+
+.hg-popup-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border-default);
+}
+
+@media (max-width: 768px) {
+    .hg-map-wrapper {
+        height: 500px;
+    }
+
+    .hg-map-section.is-maximized {
+        padding: 12px;
+    }
+
+    .hg-layer-btn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+
+    .hg-map-overlay-controls {
+        bottom: 12px;
+        width: 92%;
+        max-width: 340px;
+    }
+
+    .hg-controls-group {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .hg-map-overlay-legend {
+        top: 12px;
+        bottom: auto;
+        left: 12px;
+    }
+}
+
+/* --- Estilos das Estações Telemétricas da ANA no Mapa --- */
+.hg-layer-btn.active-stations {
+    background-color: var(--status-normal-bg);
+    color: var(--status-normal-text);
+}
+
+.hg-legend-station-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: #10b981;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 0 1px #0f172a;
+}
+
+.hg-station-popup-meta {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.hg-station-metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    background-color: var(--color-bg-subtle);
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border-default);
+    margin: 4px 0;
+}
+
+.hg-station-metric-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.hg-station-metric-item span {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
+.hg-station-metric-item strong {
+    font-size: 0.92rem;
+    color: var(--color-text-primary);
+}

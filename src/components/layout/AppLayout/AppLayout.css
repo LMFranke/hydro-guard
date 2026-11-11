@@ -1,0 +1,27 @@
+.hg-app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: var(--color-bg-app);
+}
+
+@media (min-width: 1024px) {
+    .hg-app-container {
+        flex-direction: row;
+    }
+}
+
+.hg-main-content {
+    flex: 1;
+    padding: 1.5rem;
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (min-width: 1024px) {
+    .hg-main-content {
+        padding: 2.5rem;
+    }
+}

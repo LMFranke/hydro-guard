@@ -1,0 +1,144 @@
+.hg-river-card {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    border: 1px solid var(--color-border-default);
+    border-left: 6px solid var(--color-border-strong);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hg-river-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.hg-river-card.status-critical {
+    border-left-color: var(--status-critical-fg);
+}
+
+.hg-river-card.status-warning {
+    border-left-color: #f59e0b;
+}
+
+.hg-river-card.status-normal {
+    border-left-color: var(--status-normal-fg);
+}
+
+.hg-river-card.status-below {
+    border-left-color: var(--status-below-fg);
+}
+
+.hg-river-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.hg-river-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0 0 4px 0;
+}
+
+.hg-river-location {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin: 0;
+}
+
+.hg-river-card-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(85px, 1fr));
+    gap: 12px;
+    background: var(--color-bg-subtle);
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+}
+
+.hg-river-measurement {
+    display: flex;
+    flex-direction: column;
+}
+
+.hg-river-measurement .label {
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.hg-river-measurement .value {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--color-text-primary);
+}
+
+.hg-river-measurement .unit-inline {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-left: 2px;
+}
+
+.hg-river-measurement .value.text-critical {
+    color: var(--status-critical-text);
+}
+
+.hg-river-measurement .value.text-warning {
+    color: #d97706;
+}
+
+.hg-river-measurement .value.text-normal {
+    color: #16a34a;
+}
+
+.hg-river-measurement .value.text-below {
+    color: var(--status-below-text);
+}
+
+/* --- Indicador de Tendência Hidrológica --- */
+.hg-river-trend-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+}
+
+.hg-river-trend-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hg-river-trend-row.trend-rising {
+    background-color: var(--status-critical-bg);
+    color: var(--status-critical-text);
+}
+
+.hg-river-trend-row.trend-falling {
+    background-color: var(--status-normal-bg);
+    color: var(--status-normal-text);
+}
+
+.hg-river-trend-row.trend-stable {
+    background-color: var(--color-bg-app);
+    color: var(--color-text-muted);
+}
+
+.hg-river-card-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--color-text-subtle);
+    border-top: 1px solid var(--color-border-light);
+    padding-top: 10px;
+}

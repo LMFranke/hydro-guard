@@ -1,0 +1,114 @@
+.hg-rain-section {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border-default);
+    border-top: 8px solid var(--brand-primary);
+    display: flex;
+    flex-direction: column;
+    margin-top: 2rem;
+}
+
+.hg-rain-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.hg-rain-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.hg-rain-icon {
+    color: var(--brand-primary);
+}
+
+.hg-rain-station {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    margin: 0 0 32px 0;
+}
+
+.hg-tubes-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 32px;
+    padding: 0 10px;
+    gap: 12px;
+}
+
+.hg-tube-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.hg-tube {
+    position: relative;
+    width: 48px;
+    height: 240px;
+    background-color: #e0f2fe;
+    border-radius: 24px;
+    border: 1px solid #bae6fd;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+}
+
+.hg-tube-fill {
+    width: 100%;
+    background-color: var(--brand-primary);
+    transition: height 0.8s ease-out;
+    border-radius: 0 0 24px 24px;
+}
+
+.hg-tick-mark {
+    position: absolute;
+    width: 8px;
+    height: 1px;
+    background-color: #38bdf8;
+    left: 6px;
+    z-index: 10;
+}
+
+.hg-tube-labels {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.hg-tube-value {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--color-text-primary);
+}
+
+.hg-tube-value .unit {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-left: 2px;
+}
+
+.hg-tube-period {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0284c7;
+}
+
+.hg-rain-footer {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    border-top: 1px solid var(--color-border-light);
+    padding-top: 16px;
+    margin-top: auto;
+}

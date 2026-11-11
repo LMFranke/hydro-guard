@@ -1,0 +1,139 @@
+.hg-alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.hg-alert-card {
+    background: var(--color-bg-subtle);
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid var(--color-border-default);
+    border-left-width: 6px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hg-alert-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.hg-alert-card.severity-critical {
+    border-left-color: var(--status-critical-fg);
+}
+
+.hg-alert-card.severity-warning {
+    border-left-color: var(--status-warning-fg);
+}
+
+.hg-alert-card.severity-watch {
+    border-left-color: var(--status-watch-fg);
+}
+
+.hg-alert-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.hg-alert-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.hg-alert-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.hg-alert-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hg-alert-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-bottom: 12px;
+}
+
+.hg-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hg-alert-description {
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
+.hg-alert-instructions {
+    background: var(--color-bg-surface);
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-default);
+}
+
+.hg-alert-instructions h4 {
+    font-size: 0.85rem;
+    color: var(--color-text-primary);
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hg-alert-instructions ul {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+}
+
+.hg-alert-instructions li {
+    margin-bottom: 4px;
+}
+
+.hg-no-alerts {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--color-text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.hg-no-alerts h3 {
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.hg-sev-icon-critical {
+    color: var(--status-critical-fg);
+}
+
+.hg-sev-icon-warning {
+    color: var(--status-warning-fg);
+}
+
+.hg-sev-icon-watch {
+    color: var(--status-watch-fg);
+}
+
+.hg-sev-icon-safe {
+    color: var(--status-normal-fg);
+}
