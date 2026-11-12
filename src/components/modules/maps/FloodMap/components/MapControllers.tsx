@@ -30,6 +30,23 @@ export function MapViewportSync({
     return null;
 }
 
+export function MapStreetFocusController({
+                                             targetCoords,
+                                         }: {
+    targetCoords: [number, number] | null;
+}) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (!targetCoords) return;
+        map.flyTo(targetCoords, Math.max(map.getZoom(), 16), {
+            duration: 0.75,
+        });
+    }, [map, targetCoords]);
+
+    return null;
+}
+
 export function MapClickHandler({
                                     enabled,
                                     onMapClick,

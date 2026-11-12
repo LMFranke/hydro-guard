@@ -8,3 +8,4 @@ export * from './riskZones.service';
 export * from './weather.service';
 export * from './system.service';
 export * from './ibge.service';
+export * from './simulation.service';

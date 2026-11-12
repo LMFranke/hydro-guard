@@ -275,3 +275,1041 @@
     font-size: 0.92rem;
     color: var(--color-text-primary);
 }
+
+/* --- Barra Superior do Simulador de Cotas (Etapa 1) --- */
+.hg-layer-btn.active-simulation {
+    background-color: rgba(147, 51, 234, 0.14);
+    color: #7e22ce;
+}
+
+.hg-sim-control-bar {
+    position: absolute;
+    top: 14px;
+    left: 56px;
+    right: 68px;
+    max-width: 840px;
+    z-index: 800;
+    background-color: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid #334155;
+    border-radius: var(--radius-lg);
+    padding: 12px 16px;
+    color: #f8fafc;
+    box-shadow: var(--shadow-xl);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: hgSimSlideDown 0.2s ease-out;
+}
+
+@keyframes hgSimSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hg-sim-bar-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.65);
+    padding-bottom: 8px;
+}
+
+.hg-sim-station-selector-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+
+.hg-sim-station-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.hg-sim-station-select-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1;
+    max-width: 380px;
+}
+
+.hg-sim-station-select {
+    width: 100%;
+    background-color: #1e293b;
+    color: #ffffff;
+    border: 1px solid #475569;
+    border-radius: var(--radius-sm);
+    padding: 5px 28px 5px 10px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: border-color 0.2s ease;
+}
+
+.hg-sim-station-select:hover,
+.hg-sim-station-select:focus {
+    border-color: #60a5fa;
+}
+
+.hg-sim-station-tooltip {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 900;
+    background-color: #0b1120;
+    color: #f8fafc;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    width: max-content;
+    max-width: 380px;
+    white-space: normal;
+    box-shadow: var(--shadow-lg);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.hg-sim-station-select-wrap:hover .hg-sim-station-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.hg-sim-station-sub {
+    display: block;
+    font-size: 0.73rem;
+    color: #94a3b8;
+}
+
+.hg-sim-station-sub strong {
+    color: #e2e8f0;
+}
+
+.hg-sim-status-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hg-sim-delta-tag {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    padding: 3px 9px;
+    border-radius: var(--radius-full);
+}
+
+.hg-sim-quota-badge {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.hg-sim-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.hg-sim-level-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    white-space: nowrap;
+}
+
+.hg-sim-slider-container {
+    flex: 1;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hg-sim-range-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: var(--radius-full);
+    outline: none;
+    cursor: pointer;
+}
+
+.hg-sim-range-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 3px solid #0f172a;
+    box-shadow: 0 0 0 2px #ffffff, 0 2px 6px rgba(0, 0, 0, 0.45);
+    cursor: grab;
+    transition: transform 0.15s ease;
+}
+
+.hg-sim-range-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.12);
+}
+
+.hg-sim-slider-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.66rem;
+    font-weight: 600;
+    color: #64748b;
+    padding: 0 2px;
+}
+
+/* Input numérico limpo e sem as setas nativas de subir/descer */
+.hg-sim-number-field {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #475569;
+    border-radius: var(--radius-md);
+    padding: 0 10px;
+    background-color: #0f172a;
+    height: 34px;
+    transition: border-color 0.2s ease;
+}
+
+.hg-sim-number-field:focus-within {
+    border-color: #60a5fa;
+}
+
+.hg-sim-number-field input {
+    width: 52px;
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-size: 0.88rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    outline: none;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.hg-sim-number-field input::-webkit-outer-spin-button,
+.hg-sim-number-field input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.hg-sim-unit {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-left: 4px;
+}
+
+.hg-sim-current-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.78rem;
+    font-weight: 700;
+    background-color: #2563eb;
+    color: #ffffff;
+    border: 1px solid #3b82f6;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.hg-sim-current-btn:hover {
+    background-color: #1d4ed8;
+}
+
+.hg-sim-current-btn.is-synced {
+    background-color: #1e293b;
+    color: #94a3b8;
+    border-color: #334155;
+}
+
+/* --- Legenda Expandida para as 5 Faixas de Cota --- */
+.hg-map-overlay-legend.is-simulation-legend {
+    width: 235px;
+}
+
+.hg-legend-dot-round {
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.hg-legend-quota-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.hg-legend-quota-text strong {
+    font-size: 0.8rem;
+    color: var(--color-text-primary);
+}
+
+.hg-legend-quota-text span {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+}
+
+.hg-legend-item.is-active-bracket {
+    background-color: var(--color-bg-app);
+    padding: 4px 6px;
+    margin: -4px -6px;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--brand-primary);
+}
+
+/* --- Camada de Mancha de Inundação Topográfica (Etapa 2) --- */
+.hg-sim-canvas-tile {
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+
+.hg-sim-loading-pill {
+    position: absolute;
+    bottom: 84px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 850;
+    background-color: rgba(15, 23, 42, 0.92);
+    color: #f8fafc;
+    border: 1px solid #3b82f6;
+    border-radius: var(--radius-full);
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: var(--shadow-lg);
+    pointer-events: none;
+}
+
+.hg-sim-loading-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #60a5fa;
+    animation: hgSimDotPulse 1s infinite ease-in-out;
+}
+
+@keyframes hgSimDotPulse {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.35;
+        transform: scale(0.8);
+    }
+}
+
+/* --- Painel Lateral de Vias Atingidas por Cota (Etapa 3) --- */
+.hg-sim-streets-panel {
+    position: absolute;
+    top: 64px;
+    right: 14px;
+    width: 320px;
+    max-height: calc(100% - 150px);
+    z-index: 800;
+    background-color: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid #334155;
+    border-radius: var(--radius-lg);
+    color: #f8fafc;
+    box-shadow: var(--shadow-xl);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: max-height 0.22s ease;
+}
+
+.hg-sim-streets-header {
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.7);
+}
+
+.hg-sim-streets-panel.is-collapsed .hg-sim-streets-header {
+    border-bottom: none;
+}
+
+.hg-sim-streets-title-group {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.hg-sim-streets-title-group .icon-alert {
+    color: #f97316;
+    flex-shrink: 0;
+}
+
+.hg-sim-streets-title-group .icon-safe {
+    color: #10b981;
+    flex-shrink: 0;
+}
+
+.hg-sim-streets-title-group h3 {
+    margin: 0;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.2;
+}
+
+.hg-sim-streets-title-group span {
+    font-size: 0.72rem;
+    color: #94a3b8;
+}
+
+.hg-sim-streets-title-group strong {
+    color: #e2e8f0;
+}
+
+.hg-sim-streets-header-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hg-sim-streets-count-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: var(--radius-full);
+    background-color: #1e293b;
+    color: #94a3b8;
+    border: 1px solid #334155;
+    font-variant-numeric: tabular-nums;
+}
+
+.hg-sim-streets-count-pill.has-impact {
+    background-color: rgba(249, 115, 22, 0.18);
+    color: #fdba74;
+    border-color: rgba(249, 115, 22, 0.45);
+}
+
+.hg-sim-collapse-btn {
+    background: transparent;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.hg-sim-collapse-btn:hover {
+    background-color: #1e293b;
+    color: #ffffff;
+}
+
+.hg-sim-streets-body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+}
+
+.hg-sim-streets-summary {
+    display: flex;
+    gap: 6px;
+    padding: 8px 12px;
+    background-color: rgba(2, 6, 23, 0.45);
+    border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+.hg-sim-summary-chip {
+    flex: 1;
+    text-align: center;
+    font-size: 0.69rem;
+    font-weight: 700;
+    padding: 3px 6px;
+    border-radius: var(--radius-sm);
+}
+
+.hg-sim-summary-chip.critical {
+    background-color: rgba(239, 68, 68, 0.16);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.hg-sim-summary-chip.warning {
+    background-color: rgba(249, 115, 22, 0.16);
+    color: #fdba74;
+    border: 1px solid rgba(249, 115, 22, 0.35);
+}
+
+.hg-sim-streets-empty {
+    padding: 24px 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: #94a3b8;
+}
+
+.hg-sim-safe-icon {
+    color: #10b981;
+    margin-bottom: 2px;
+}
+
+.hg-sim-streets-empty strong {
+    font-size: 0.84rem;
+    color: #e2e8f0;
+}
+
+.hg-sim-streets-empty p {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+.hg-sim-streets-list {
+    list-style: none;
+    margin: 0;
+    padding: 8px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 360px;
+}
+
+.hg-sim-streets-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.hg-sim-streets-list::-webkit-scrollbar-thumb {
+    background-color: #334155;
+    border-radius: var(--radius-full);
+}
+
+.hg-sim-street-item {
+    width: 100%;
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-left-width: 4px;
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    text-align: left;
+    color: #f8fafc;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.hg-sim-street-item:hover {
+    background-color: #26354d;
+    transform: translateX(-2px);
+}
+
+.hg-sim-street-item.is-selected {
+    background-color: rgba(37, 99, 235, 0.24);
+    border-color: #60a5fa;
+}
+
+.hg-sim-street-item.border-critical {
+    border-left-color: #ef4444;
+}
+
+.hg-sim-street-item.border-warning {
+    border-left-color: #f97316;
+}
+
+.hg-sim-street-item.border-watch {
+    border-left-color: #facc15;
+}
+
+.hg-sim-street-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.hg-sim-street-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hg-sim-street-meta {
+    font-size: 0.69rem;
+    color: #94a3b8;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.hg-sim-street-metrics {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.hg-sim-depth-badge {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+}
+
+.hg-sim-depth-badge.critical {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+}
+
+.hg-sim-depth-badge.warning {
+    background-color: rgba(249, 115, 22, 0.2);
+    color: #fdba74;
+}
+
+.hg-sim-depth-badge.watch {
+    background-color: rgba(250, 204, 21, 0.2);
+    color: #fef08a;
+}
+
+.hg-sim-focus-hint {
+    font-size: 0.64rem;
+    color: #60a5fa;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-weight: 600;
+}
+
+@media (max-width: 960px) {
+    .hg-sim-streets-panel {
+        top: auto;
+        bottom: 78px;
+        right: 12px;
+        width: 280px;
+        max-height: 260px;
+    }
+}
+
+/* --- Dock Lateral Direito (Etapa 3 + Etapa 4: Pesquisa + Vias Atingidas) --- */
+.hg-sim-right-dock {
+    position: absolute;
+    top: 64px;
+    right: 14px;
+    width: 330px;
+    max-height: calc(100% - 148px);
+    z-index: 810;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.hg-sim-right-dock > * {
+    pointer-events: auto;
+}
+
+/* Sobrescreve posicionamento individual do painel da Etapa 3 quando dentro do dock */
+.hg-sim-right-dock .hg-sim-streets-panel {
+    position: static;
+    width: 100%;
+    max-height: none;
+    flex: 1;
+    min-height: 0;
+}
+
+/* --- Pesquisa de Ruas e Card de Diagnóstico de Cota (Etapa 4) --- */
+.hg-sim-search-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.hg-sim-search-input-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid #475569;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hg-sim-search-input-box:focus-within {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.hg-sim-search-icon {
+    position: absolute;
+    left: 12px;
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.hg-sim-search-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #f8fafc;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: inherit;
+    padding: 10px 32px 10px 34px;
+    outline: none;
+}
+
+.hg-sim-search-input::placeholder {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.hg-sim-search-clear-btn {
+    position: absolute;
+    right: 8px;
+    background: rgba(51, 65, 85, 0.6);
+    border: none;
+    color: #cbd5e1;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.hg-sim-search-clear-btn:hover {
+    background-color: #475569;
+    color: #ffffff;
+}
+
+.hg-sim-search-dropdown {
+    position: absolute;
+    top: 42px;
+    left: 0;
+    right: 0;
+    z-index: 920;
+    background-color: #0f172a;
+    border: 1px solid #475569;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xl);
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hg-sim-search-no-results {
+    padding: 12px;
+    text-align: center;
+    font-size: 0.76rem;
+    color: #94a3b8;
+}
+
+.hg-sim-search-option {
+    width: 100%;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    text-align: left;
+    color: #f8fafc;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.hg-sim-search-option:hover {
+    background-color: #1e293b;
+    border-color: #334155;
+}
+
+.hg-sim-search-option-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.hg-sim-search-option-main strong {
+    font-size: 0.8rem;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hg-sim-search-option-main span {
+    font-size: 0.69rem;
+    color: #94a3b8;
+}
+
+.hg-sim-search-status-tag {
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 3px 7px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.hg-sim-search-status-tag.safe {
+    background-color: rgba(16, 185, 129, 0.18);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.hg-sim-search-status-tag.watch {
+    background-color: rgba(250, 204, 21, 0.2);
+    color: #fef08a;
+}
+
+.hg-sim-search-status-tag.warning {
+    background-color: rgba(249, 115, 22, 0.2);
+    color: #fdba74;
+}
+
+.hg-sim-search-status-tag.critical {
+    background-color: rgba(239, 68, 68, 0.22);
+    color: #fca5a5;
+}
+
+/* Card de Diagnóstico da Via Selecionada */
+.hg-sim-street-diagnostic-card {
+    background-color: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid #475569;
+    border-left-width: 4px;
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    color: #f8fafc;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.hg-sim-street-diagnostic-card.is-safe {
+    border-left-color: #10b981;
+}
+
+.hg-sim-street-diagnostic-card.is-watch {
+    border-left-color: #facc15;
+}
+
+.hg-sim-street-diagnostic-card.is-warning {
+    border-left-color: #f97316;
+}
+
+.hg-sim-street-diagnostic-card.is-critical {
+    border-left-color: #ef4444;
+}
+
+.hg-sim-diag-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.hg-sim-diag-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.diag-icon-safe {
+    color: #10b981;
+    flex-shrink: 0;
+}
+
+.diag-icon-flooded {
+    color: #f97316;
+    flex-shrink: 0;
+}
+
+.hg-sim-diag-title-wrap h4 {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.2;
+}
+
+.hg-sim-diag-title-wrap span {
+    font-size: 0.69rem;
+    color: #94a3b8;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.hg-sim-diag-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hg-sim-diag-close:hover {
+    color: #ffffff;
+}
+
+.hg-sim-diag-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.hg-sim-diag-metric-box {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.hg-sim-diag-metric-box span {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.hg-sim-diag-metric-box strong {
+    font-size: 0.82rem;
+    color: #f8fafc;
+    font-variant-numeric: tabular-nums;
+}
+
+.hg-sim-diag-metric-box strong.text-safe {
+    color: #34d399;
+}
+
+.hg-sim-diag-metric-box strong.text-danger {
+    color: #fdba74;
+}
+
+.hg-sim-diag-jump-btn {
+    width: 100%;
+    background-color: rgba(37, 99, 235, 0.22);
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    color: #93c5fd;
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.hg-sim-diag-jump-btn:hover {
+    background-color: #2563eb;
+    color: #ffffff;
+}
+
+@media (max-width: 1200px) {
+    .hg-sim-control-bar {
+        max-width: calc(100% - 415px);
+    }
+}
+
+@media (max-width: 960px) {
+    .hg-sim-control-bar {
+        max-width: none;
+    }
+
+    .hg-sim-right-dock {
+        top: auto;
+        bottom: 78px;
+        right: 12px;
+        width: 290px;
+        max-height: 310px;
+    }
+}

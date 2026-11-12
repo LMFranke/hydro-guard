@@ -1,9 +1,9 @@
-import { Mountain, Radio, Waves } from 'lucide-react';
-import type { MapLayer } from '../../../../../types';
+import { Gauge, Mountain, Radio, Waves } from 'lucide-react';
+import type { MapViewMode } from '../../../../../types';
 
 interface MapLayerControlsProps {
-    activeLayer: MapLayer;
-    onSelectLayer: (layer: MapLayer) => void;
+    activeMode: MapViewMode;
+    onSelectMode: (mode: MapViewMode) => void;
     showStations: boolean;
     onToggleStations: () => void;
     floodCount: number;
@@ -12,8 +12,8 @@ interface MapLayerControlsProps {
 }
 
 export function MapLayerControls({
-                                     activeLayer,
-                                     onSelectLayer,
+                                     activeMode,
+                                     onSelectMode,
                                      showStations,
                                      onToggleStations,
                                      floodCount,
@@ -26,9 +26,9 @@ export function MapLayerControls({
                 <button
                     type="button"
                     className={`hg-layer-btn ${
-                        activeLayer === 'FLOOD' ? 'active-flood' : ''
+                        activeMode === 'FLOOD' ? 'active-flood' : ''
                     }`}
-                    onClick={() => onSelectLayer('FLOOD')}
+                    onClick={() => onSelectMode('FLOOD')}
                 >
                     <Waves size={18} />
                     <span>Inundações ({floodCount})</span>
@@ -37,12 +37,23 @@ export function MapLayerControls({
                 <button
                     type="button"
                     className={`hg-layer-btn ${
-                        activeLayer === 'LANDSLIDE' ? 'active-landslide' : ''
+                        activeMode === 'LANDSLIDE' ? 'active-landslide' : ''
                     }`}
-                    onClick={() => onSelectLayer('LANDSLIDE')}
+                    onClick={() => onSelectMode('LANDSLIDE')}
                 >
                     <Mountain size={18} />
                     <span>Desabamentos ({landslideCount})</span>
+                </button>
+
+                <button
+                    type="button"
+                    className={`hg-layer-btn ${
+                        activeMode === 'SIMULATION' ? 'active-simulation' : ''
+                    }`}
+                    onClick={() => onSelectMode('SIMULATION')}
+                >
+                    <Gauge size={18} />
+                    <span>Simulador de Cota</span>
                 </button>
 
                 <button

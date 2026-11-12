@@ -4,24 +4,46 @@ import { MapPin, Maximize2, Minimize2, Plus } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { ENV } from '../../../../config/env';
 import { useAuth, useMonitoring, useTenant } from '../../../../contexts';
-import type { MapLayer, RiskZone, RiskZoneInput } from '../../../../types';
+import {
+    evaluateImpactedStreets,
+    fetchCitySimulationDataset,
+    inspectStreetAtQuota,
+    type CitySimulationDataset,
+} from '../../../../services';
+import type {
+    MapLayer,
+    MapViewMode,
+    RiskZone,
+    RiskZoneInput,
+} from '../../../../types';
+import {
+    buildSimulationStationProfiles,
+    evaluateSimulationQuota,
+} from '../../../../utils';
 import { Button } from '../../../ui';
+import { ImpactedStreetsPanel } from './components/ImpactedStreetsPanel';
 import {
     MapClickHandler,
+    MapStreetFocusController,
     MapViewportSync,
 } from './components/MapControllers';
 import { MapLayerControls } from './components/MapLayerControls';
 import { MapLegend } from './components/MapLegend';
 import { RiskZoneModal } from './components/RiskZoneModal';
+import { SimulationControlBar } from './components/SimulationControlBar';
+import { StreetQuotaSearch } from './components/StreetQuotaSearch';
+import { FloodSimulationLayer } from './layers/FloodSimulationLayer';
 import { FloodZonesLayer } from './layers/FloodZonesLayer';
 import { LandslideZonesLayer } from './layers/LandslideZonesLayer';
 import { TelemetryStationsLayer } from './layers/TelemetryStationsLayer';
 import './FloodMap.css';
 
 export function FloodMap() {
-    const { coordinates, cityDisplayName } = useTenant();
+    const { tenant, citySlug, coordinates, cityDisplayName } = useTenant();
     const { isCoordinator } = useAuth();
     const {
+        rivers,
+        historyData,
         riskZones,
         stationMarkers,
         addRiskZone,
@@ -29,7 +51,38 @@ export function FloodMap() {
         removeRiskZone,
     } = useMonitoring();
 
-    const [activeLayer, setActiveLayer] = useState<MapLayer>('FLOOD');
+    const simulationStations = useMemo(
+        () =>
+            buildSimulationStationProfiles(
+                rivers,
+                historyData,
+                stationMarkers,
+                coordinates,
+                tenant?.name ?? cityDisplayName
+            ),
+        [rivers, historyData, stationMarkers, coordinates, tenant?.name, cityDisplayName]
+    );
+
+    const [selectedStationId, setSelectedStationId] = useState<string>('');
+    const [activeMode, setActiveMode] = useState<MapViewMode>('FLOOD');
+
+    const selectedStation = useMemo(
+        () =>
+            simulationStations.find((s) => s.stationId === selectedStationId) ??
+            simulationStations[0],
+        [simulationStations, selectedStationId]
+    );
+
+    const [simulatedLevel, setSimulatedLevel] = useState<number>(
+        () => selectedStation.currentLevel
+    );
+    const [simulationDataset, setSimulationDataset] =
+        useState<CitySimulationDataset | null>(null);
+    const [selectedStreetId, setSelectedStreetId] = useState<string | null>(null);
+    const [focusedStreetCoords, setFocusedStreetCoords] = useState<
+        [number, number] | null
+    >(null);
+
     const [showStations, setShowStations] = useState<boolean>(true);
     const [isMaximized, setIsMaximized] = useState<boolean>(false);
     const [isPickingLocation, setIsPickingLocation] = useState<boolean>(false);
@@ -39,6 +92,71 @@ export function FloodMap() {
     const [pickedCoords, setPickedCoords] = useState<[number, number] | null>(
         null
     );
+
+    const activeQuotaBracket = useMemo(
+        () => evaluateSimulationQuota(simulatedLevel, selectedStation.brackets),
+        [simulatedLevel, selectedStation.brackets]
+    );
+
+    const activeMapCenter = useMemo<[number, number]>(() => {
+        if (activeMode === 'SIMULATION') {
+            return selectedStation.coordinates;
+        }
+        return coordinates;
+    }, [activeMode, selectedStation.coordinates, coordinates]);
+
+    useEffect(() => {
+        if (activeMode !== 'SIMULATION') return;
+        if (simulationDataset?.citySlug === citySlug) return;
+
+        let isMounted = true;
+
+        async function loadSimulationData() {
+            const dataset = await fetchCitySimulationDataset(citySlug, coordinates);
+            if (!isMounted) return;
+            setSimulationDataset(dataset);
+        }
+
+        void loadSimulationData();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [activeMode, citySlug, coordinates, simulationDataset?.citySlug]);
+
+    const currentCityStreets = useMemo(
+        () =>
+            simulationDataset?.citySlug === citySlug ? simulationDataset.streets : [],
+        [simulationDataset, citySlug]
+    );
+
+    const currentHydroMesh = useMemo(
+        () =>
+            simulationDataset?.citySlug === citySlug
+                ? simulationDataset.hydroMesh
+                : null,
+        [simulationDataset, citySlug]
+    );
+
+    const isLoadingSimulationData =
+        activeMode === 'SIMULATION' && simulationDataset?.citySlug !== citySlug;
+
+    const impactedStreets = useMemo(
+        () =>
+            evaluateImpactedStreets(
+                currentCityStreets,
+                selectedStation,
+                simulatedLevel
+            ),
+        [currentCityStreets, selectedStation, simulatedLevel]
+    );
+
+    const inspectedDiagnostic = useMemo(() => {
+        if (!selectedStreetId) return null;
+        const found = currentCityStreets.find((s) => s.id === selectedStreetId);
+        if (!found) return null;
+        return inspectStreetAtQuota(found, selectedStation, simulatedLevel);
+    }, [selectedStreetId, currentCityStreets, selectedStation, simulatedLevel]);
 
     useEffect(() => {
         if (!isMaximized) return;
@@ -73,6 +191,36 @@ export function FloodMap() {
         return { floodCount: flood, landslideCount: landslide };
     }, [riskZones]);
 
+    const handleSelectMode = (mode: MapViewMode) => {
+        if (mode === 'SIMULATION' && activeMode !== 'SIMULATION') {
+            setSimulatedLevel(selectedStation.currentLevel);
+            setSelectedStreetId(null);
+            setFocusedStreetCoords(null);
+            setIsPickingLocation(false);
+        }
+        setActiveMode(mode);
+    };
+
+    const handleSelectSimulationStation = (newStationId: string) => {
+        setSelectedStationId(newStationId);
+        setSelectedStreetId(null);
+        setFocusedStreetCoords(null);
+        const target = simulationStations.find((s) => s.stationId === newStationId);
+        if (target) {
+            setSimulatedLevel(target.currentLevel);
+        }
+    };
+
+    const handleFocusStreet = (streetId: string, coords: [number, number]) => {
+        setSelectedStreetId(streetId);
+        setFocusedStreetCoords([coords[0], coords[1]]);
+    };
+
+    const handleClearStreetSelection = () => {
+        setSelectedStreetId(null);
+        setFocusedStreetCoords(null);
+    };
+
     const openCreateModal = (coords?: [number, number]) => {
         setEditingZone(null);
         setPickedCoords(coords ?? null);
@@ -97,10 +245,10 @@ export function FloodMap() {
     ) => {
         if (editingId) {
             const updated = await editRiskZone(editingId, payload);
-            setActiveLayer(updated.zoneType);
+            setActiveMode(updated.zoneType);
         } else {
             const created = await addRiskZone(payload);
-            setActiveLayer(created.zoneType);
+            setActiveMode(created.zoneType);
         }
         setShowModal(false);
     };
@@ -109,6 +257,9 @@ export function FloodMap() {
         if (!window.confirm('Deseja realmente remover esta área de risco?')) return;
         await removeRiskZone(id);
     };
+
+    const defaultModalLayer: MapLayer =
+        activeMode === 'LANDSLIDE' ? 'LANDSLIDE' : 'FLOOD';
 
     return (
         <section
@@ -120,17 +271,17 @@ export function FloodMap() {
             <header className="hg-section-header">
                 <div>
                     <h2 id="map-title" className="hg-section-title">
-                        Mapeamento de Áreas de Risco e Sensores
+                        Mapeamento de Áreas de Risco e Simulador de Cotas
                     </h2>
                     {!isMaximized && (
                         <p className="hg-section-subtitle">
-                            Visualização por satélite de pontos críticos e estações da ANA em{' '}
-                            {cityDisplayName}.
+                            Visualização por satélite de pontos críticos, sensores da ANA e
+                            simulação de inundação em {cityDisplayName}.
                         </p>
                     )}
                 </div>
 
-                {isCoordinator && (
+                {isCoordinator && activeMode !== 'SIMULATION' && (
                     <div className="hg-map-actions">
                         <Button
                             variant={isPickingLocation ? 'success' : 'dark'}
@@ -156,15 +307,56 @@ export function FloodMap() {
             <div
                 className={`hg-map-wrapper ${isPickingLocation ? 'picking-mode' : ''}`}
             >
+                {activeMode === 'SIMULATION' && (
+                    <>
+                        <SimulationControlBar
+                            stations={simulationStations}
+                            selectedStation={selectedStation}
+                            simulatedLevel={simulatedLevel}
+                            activeBracket={activeQuotaBracket}
+                            onSelectStation={handleSelectSimulationStation}
+                            onChangeLevel={setSimulatedLevel}
+                            onResetToRealLevel={() =>
+                                setSimulatedLevel(selectedStation.currentLevel)
+                            }
+                        />
+
+                        <div className="hg-sim-right-dock">
+                            <StreetQuotaSearch
+                                cityName={tenant?.name ?? cityDisplayName}
+                                streets={currentCityStreets}
+                                selectedStation={selectedStation}
+                                simulatedLevel={simulatedLevel}
+                                inspectedDiagnostic={inspectedDiagnostic}
+                                onSelectStreet={handleFocusStreet}
+                                onClearSelection={handleClearStreetSelection}
+                                onJumpToQuota={setSimulatedLevel}
+                            />
+
+                            <ImpactedStreetsPanel
+                                impactedStreets={impactedStreets}
+                                totalCatalogCount={currentCityStreets.length}
+                                simulatedLevel={simulatedLevel}
+                                selectedStreetId={selectedStreetId}
+                                isLoading={isLoadingSimulationData}
+                                onSelectStreet={handleFocusStreet}
+                            />
+                        </div>
+                    </>
+                )}
+
                 <MapContainer
-                    center={coordinates}
+                    center={activeMapCenter}
                     zoom={14}
                     scrollWheelZoom={true}
                     className="hg-leaflet-container"
                 >
-                    <MapViewportSync center={coordinates} isMaximized={isMaximized} />
+                    <MapViewportSync center={activeMapCenter} isMaximized={isMaximized} />
+                    <MapStreetFocusController targetCoords={focusedStreetCoords} />
                     <MapClickHandler
-                        enabled={isCoordinator && isPickingLocation}
+                        enabled={
+                            isCoordinator && isPickingLocation && activeMode !== 'SIMULATION'
+                        }
                         onMapClick={handleMapClick}
                     />
 
@@ -173,20 +365,41 @@ export function FloodMap() {
                         url={ENV.ARCGIS_TILE_URL}
                     />
 
-                    {activeLayer === 'FLOOD' ? (
+                    {activeMode === 'FLOOD' && (
                         <FloodZonesLayer
                             zones={riskZones}
                             isCoordinator={isCoordinator}
                             onEdit={openEditModal}
                             onDelete={handleDeleteZone}
                         />
-                    ) : (
+                    )}
+
+                    {activeMode === 'LANDSLIDE' && (
                         <LandslideZonesLayer
                             zones={riskZones}
                             isCoordinator={isCoordinator}
                             onEdit={openEditModal}
                             onDelete={handleDeleteZone}
                         />
+                    )}
+
+                    {activeMode === 'SIMULATION' && (
+                        <>
+                            <TileLayer
+                                url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+                                opacity={0.75}
+                            />
+                            <FloodSimulationLayer
+                                hydroMesh={currentHydroMesh}
+                                isLoadingData={isLoadingSimulationData}
+                                selectedStation={selectedStation}
+                                stationCoordinates={activeMapCenter}
+                                simulatedLevel={simulatedLevel}
+                                impactedStreets={impactedStreets}
+                                inspectedDiagnostic={inspectedDiagnostic}
+                                onSelectStreet={handleFocusStreet}
+                            />
+                        </>
                     )}
 
                     {showStations && (
@@ -206,11 +419,16 @@ export function FloodMap() {
                     {isMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                 </button>
 
-                <MapLegend activeLayer={activeLayer} showStations={showStations} />
+                <MapLegend
+                    activeMode={activeMode}
+                    showStations={showStations}
+                    quotaBrackets={selectedStation.brackets}
+                    activeQuotaStatus={activeQuotaBracket.status}
+                />
 
                 <MapLayerControls
-                    activeLayer={activeLayer}
-                    onSelectLayer={setActiveLayer}
+                    activeMode={activeMode}
+                    onSelectMode={handleSelectMode}
                     showStations={showStations}
                     onToggleStations={() => setShowStations((prev) => !prev)}
                     floodCount={floodCount}
@@ -223,7 +441,7 @@ export function FloodMap() {
                 isOpen={showModal}
                 editingZone={editingZone}
                 defaultCoordinates={pickedCoords ?? coordinates}
-                defaultLayer={activeLayer}
+                defaultLayer={defaultModalLayer}
                 onClose={() => setShowModal(false)}
                 onSubmitZone={handleSaveZone}
             />
