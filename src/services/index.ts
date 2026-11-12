@@ -6,3 +6,5 @@ export * from './telemetry.service';
 export * from './alerts.service';
 export * from './riskZones.service';
 export * from './weather.service';
+export * from './system.service';
+export * from './ibge.service';

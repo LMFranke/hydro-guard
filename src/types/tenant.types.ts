@@ -21,3 +21,26 @@ export interface CityStatusSummary {
     label: 'Normal' | 'Alerta' | 'Crítico';
     badgeVariant: 'normal' | 'warning' | 'critical';
 }
+
+export type ServiceOperationalStatus =
+    | 'ONLINE'
+    | 'INSTABLE'
+    | 'OFFLINE'
+    | 'CHECKING';
+
+export interface SystemHealthDTO {
+    backendStatus: 'ONLINE' | 'INSTABLE' | 'OFFLINE';
+    anaApiStatus: 'ONLINE' | 'INSTABLE' | 'OFFLINE';
+    anaLatencyMs: number | null;
+    checkedAt: string;
+    lastAnaSuccessAt: string | null;
+    message: string;
+}
+
+export interface SystemHealthState {
+    backendStatus: ServiceOperationalStatus;
+    anaApiStatus: ServiceOperationalStatus;
+    anaLatencyMs: number | null;
+    checkedAt: string | null;
+    message: string;
+}

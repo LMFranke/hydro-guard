@@ -27,16 +27,20 @@ export function TelemetryStationsLayer({
         <>
             {stations.map((station) => {
                 const statusVariant = station.status.toLowerCase() as BadgeVariant;
+                const isPluviometric =
+                    station.stationType.toLowerCase() === 'pluviometrica';
 
                 return (
                     <CircleMarker
                         key={station.stationCode}
                         center={station.coordinates}
-                        radius={9}
+                        radius={isPluviometric ? 7 : 9}
                         pathOptions={{
                             color: '#ffffff',
                             weight: 3,
-                            fillColor: STATION_MARKER_COLOR[station.status],
+                            fillColor: isPluviometric
+                                ? '#0ea5e9'
+                                : STATION_MARKER_COLOR[station.status],
                             fillOpacity: 1,
                         }}
                     >
@@ -44,7 +48,10 @@ export function TelemetryStationsLayer({
                             <div className="hg-map-popup">
                                 <strong>{station.stationName}</strong>
                                 <span className="hg-station-popup-meta">
-                  Estação ANA #{station.stationCode} • {station.riverName}
+                  {isPluviometric
+                      ? 'Pluviômetro'
+                      : 'Estação Fluviométrica'}{' '}
+                                    #{station.stationCode} • {station.riverName}
                 </span>
                                 <div>
                                     <Badge variant={statusVariant}>

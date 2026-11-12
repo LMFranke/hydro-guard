@@ -3,9 +3,14 @@ import { AuthProvider } from './AuthContext';
 import { MonitoringProvider } from './MonitoringContext';
 import { TenantProvider } from './TenantContext';
 
-export function AppProviders({ children }: { children: ReactNode }) {
+interface AppProvidersProps {
+    citySlug: string;
+    children: ReactNode;
+}
+
+export function AppProviders({ citySlug, children }: AppProvidersProps) {
     return (
-        <TenantProvider>
+        <TenantProvider citySlug={citySlug}>
             <AuthProvider>
                 <MonitoringProvider>{children}</MonitoringProvider>
             </AuthProvider>

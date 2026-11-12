@@ -1,26 +1,61 @@
 import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import defaultBannerFallback from '../assets/banner-rodeio.png';
 import defaultLogoFallback from '../assets/logo-rodeio.png';
-import { APP_CONFIG, ENV } from '../config/env';
+import { APP_CONFIG } from '../config/env';
 import { fetchCityTenant } from '../services';
 import type { CityTenant } from '../types';
-import { applyTenantBranding, formatCityDisplayName } from '../utils';
+import {
+    applyTenantBranding,
+    CACHE_TTL,
+    formatCityDisplayName,
+    readCache,
+    writeCache,
+} from '../utils';
 import { TenantContext, type TenantContextValue } from './index';
 
-function resolveInitialCitySlug(): string {
-    const params = new URLSearchParams(window.location.search);
-    const queryCity = params.get('city')?.trim().toLowerCase();
-    return queryCity || ENV.DEFAULT_CITY_SLUG;
+interface TenantProviderProps {
+    citySlug: string;
+    children: ReactNode;
 }
 
-export function TenantProvider({ children }: { children: ReactNode }) {
-    const [citySlug] = useState<string>(resolveInitialCitySlug);
-    const [tenant, setTenant] = useState<CityTenant | null>(null);
-    const [isLoadingTenant, setIsLoadingTenant] = useState<boolean>(true);
+function findInitialCachedTenant(slug: string): CityTenant | null {
+    const directCache = readCache<CityTenant>(`tenant_${slug}`);
+    if (directCache) return directCache.data;
+
+    // Aproveita a lista já carregada no Mapa de SC se existir
+    const portalList = readCache<CityTenant[]>('portal_cities_list');
+    if (portalList) {
+        const found = portalList.data.find((c) => c.slug === slug);
+        if (found) {
+            writeCache(`tenant_${slug}`, found, CACHE_TTL.TENANT_MS);
+            return found;
+        }
+    }
+
+    return null;
+}
+
+export function TenantProvider({ citySlug, children }: TenantProviderProps) {
+    const [tenant, setTenant] = useState<CityTenant | null>(() =>
+        findInitialCachedTenant(citySlug)
+    );
+    const [isLoadingTenant, setIsLoadingTenant] = useState<boolean>(
+        () => findInitialCachedTenant(citySlug) === null
+    );
     const [tenantError, setTenantError] = useState<string | null>(null);
 
     useEffect(() => {
         let isMounted = true;
+        const cached = readCache<CityTenant>(`tenant_${citySlug}`);
+
+        if (cached) {
+            applyTenantBranding(cached.data);
+            if (!cached.isExpired) {
+                return () => {
+                    isMounted = false;
+                };
+            }
+        }
 
         async function loadTenantData() {
             try {
@@ -28,11 +63,12 @@ export function TenantProvider({ children }: { children: ReactNode }) {
                 if (!isMounted) return;
                 setTenant(data);
                 setTenantError(null);
+                writeCache(`tenant_${citySlug}`, data, CACHE_TTL.TENANT_MS);
                 applyTenantBranding(data);
             } catch (error) {
                 console.error(`[HydroGuard] Falha ao carregar tenant "${citySlug}":`, error);
                 if (!isMounted) return;
-                setTenantError('Não foi possível carregar as configurações do município.');
+                setTenantError(`O município "${citySlug}" não está cadastrado na plataforma.`);
                 applyTenantBranding(null);
             } finally {
                 if (isMounted) {

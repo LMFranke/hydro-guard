@@ -1,59 +1,22 @@
-.hg-mobile-topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: var(--color-bg-dark);
-    padding: 1rem 1.5rem;
-    color: #ffffff;
-}
-
-.hg-mobile-logo {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-}
-
-.hg-brand-icon {
-    color: var(--brand-primary);
-}
-
-.hg-mobile-toggle {
-    background: none;
-    border: none;
-    color: #ffffff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 .hg-sidebar {
     background-color: var(--color-bg-dark);
     color: var(--color-text-subtle);
     display: flex;
     flex-direction: column;
-    width: 280px;
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: -280px;
-    z-index: var(--z-sidebar);
-    transition: transform 0.3s ease-in-out;
-    border-right: 1px solid var(--color-bg-dark-elevated);
+    width: 100%;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--color-bg-dark-elevated);
 }
 
-.hg-sidebar.open {
-    transform: translateX(280px);
-}
-
-.hg-sidebar-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(15, 23, 42, 0.55);
-    backdrop-filter: blur(2px);
-    z-index: var(--z-sidebar-overlay);
+@media (min-width: 768px) {
+    .hg-sidebar {
+        width: 280px;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+        border-bottom: none;
+        border-right: 1px solid var(--color-bg-dark-elevated);
+    }
 }
 
 .hg-sidebar-header {
@@ -117,7 +80,7 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.85rem 1rem;
+    padding: 0.8rem 1rem;
     color: #cbd5e1;
     text-decoration: none;
     border-radius: var(--radius-md);
@@ -127,6 +90,7 @@
 
 .hg-nav-icon {
     color: var(--color-text-muted);
+    flex-shrink: 0;
     transition: color 0.2s ease;
 }
 
@@ -148,6 +112,96 @@
     color: #ffffff;
 }
 
+.hg-nav-link-label {
+    flex: 1;
+    line-height: 1.2;
+}
+
+/* --- Indicador de Alertas Ativos (LED Status Chip) --- */
+.hg-nav-alert-chip {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 9px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+/* Estado quando a aba NÃO está ativa (sobre fundo escuro da Sidebar) */
+.hg-nav-alert-chip.critical {
+    background-color: rgba(239, 68, 68, 0.16);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fecaca;
+}
+
+.hg-nav-alert-chip.warning {
+    background-color: rgba(249, 115, 22, 0.16);
+    border: 1px solid rgba(249, 115, 22, 0.4);
+    color: #fed7aa;
+}
+
+.hg-nav-alert-chip.watch {
+    background-color: rgba(234, 179, 8, 0.16);
+    border: 1px solid rgba(234, 179, 8, 0.4);
+    color: #fef08a;
+}
+
+/* Estado quando a aba Alertas ESTÁ ativa (sobre o botão azul) */
+.hg-nav-link.active .hg-nav-alert-chip {
+    background-color: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+}
+
+/* Ponto de LED interno (círculo geométrico puro) */
+.hg-nav-alert-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.hg-nav-alert-chip.critical .hg-nav-alert-dot {
+    background-color: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.9);
+    animation: hgLedPulse 1.8s infinite ease-in-out;
+}
+
+.hg-nav-alert-chip.warning .hg-nav-alert-dot {
+    background-color: #fb923c;
+    box-shadow: 0 0 8px rgba(251, 146, 60, 0.85);
+}
+
+.hg-nav-alert-chip.watch .hg-nav-alert-dot {
+    background-color: #facc15;
+    box-shadow: 0 0 8px rgba(250, 204, 21, 0.85);
+}
+
+.hg-nav-alert-count {
+    display: inline-block;
+    transform: translateY(-0.5px);
+}
+
+@keyframes hgLedPulse {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.45;
+        transform: scale(0.85);
+    }
+}
+
+/* --- Rodapé da Sidebar --- */
 .hg-sidebar-footer {
     padding: 1.25rem;
     border-top: 1px solid var(--color-bg-dark-elevated);
@@ -269,58 +323,163 @@
     color: #ffffff;
 }
 
-.hg-system-status {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
+/* --- Painel Duplo de Status Operacional (Back-end + API ANA) --- */
+.hg-system-status-card {
     background-color: var(--color-bg-dark-elevated);
-    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-border-dark);
+    padding: 0.75rem 0.9rem;
     border-radius: var(--radius-md);
-    position: relative;
-}
-
-.hg-status-icon {
-    color: var(--status-normal-fg);
-}
-
-.hg-status-text {
     display: flex;
     flex-direction: column;
+    gap: 0.55rem;
 }
 
-.hg-status-title {
-    font-size: 0.72rem;
+.hg-status-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+    padding-bottom: 0.4rem;
+}
+
+.hg-status-card-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
     color: var(--color-text-subtle);
 }
 
-.hg-status-value {
-    font-size: 0.85rem;
-    color: var(--color-text-on-dark);
-    font-weight: 600;
+.hg-status-refresh-btn {
+    background: none;
+    border: none;
+    color: var(--color-text-subtle);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border-radius: 4px;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.hg-status-refresh-btn:hover:not(:disabled) {
+    color: #ffffff;
+}
+
+.hg-status-refresh-btn.spinning {
+    animation: hgSpinStatus 1s linear infinite;
+}
+
+@keyframes hgSpinStatus {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.hg-status-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.hg-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+}
+
+.hg-status-service-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
+.hg-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.hg-status-pill.online {
+    color: #34d399;
+}
+
+.hg-status-pill.instable {
+    color: #fbbf24;
+}
+
+.hg-status-pill.offline {
+    color: #f87171;
+}
+
+.hg-status-pill.checking {
+    color: #94a3b8;
 }
 
 .hg-status-dot {
-    position: absolute;
-    right: 1rem;
     width: 8px;
     height: 8px;
-    background-color: var(--status-normal-fg);
     border-radius: 50%;
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    flex-shrink: 0;
 }
 
-@media (min-width: 1024px) {
-    .hg-mobile-topbar {
-        display: none;
-    }
+.hg-status-dot.online {
+    background-color: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.65);
+}
 
-    .hg-sidebar {
-        position: sticky;
-        transform: none;
-        left: 0;
-    }
+.hg-status-dot.instable {
+    background-color: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.65);
+}
 
-    .hg-sidebar-overlay {
-        display: none;
-    }
+.hg-status-dot.offline {
+    background-color: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.65);
+}
+
+.hg-status-dot.checking {
+    background-color: #64748b;
+}
+
+.hg-status-latency {
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--color-text-subtle);
+}
+
+/* --- Link de Retorno ao Mapa Estadual de SC --- */
+.hg-state-portal-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--color-border-dark);
+    color: #cbd5e1;
+    font-size: 0.76rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.hg-state-portal-link:hover {
+    background-color: var(--color-bg-dark-elevated);
+    border-color: var(--brand-primary);
+    color: #ffffff;
 }

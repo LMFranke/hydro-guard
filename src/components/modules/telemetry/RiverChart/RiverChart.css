@@ -1,57 +1,126 @@
+.hg-chart-card {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border-default);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
 .hg-chart-header {
     display: flex;
-    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
+    flex-wrap: wrap;
     gap: 16px;
     padding-bottom: 16px;
     border-bottom: 1px solid var(--color-border-light);
 }
 
-.hg-chart-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    margin: 0;
+.hg-chart-title-group {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.hg-chart-title::before {
-    content: '';
-    display: inline-block;
+.hg-chart-indicator {
     width: 4px;
-    height: 24px;
+    height: 22px;
     background-color: var(--brand-primary);
-    border-radius: 4px;
+    border-radius: var(--radius-full);
 }
 
-.hg-river-select {
-    padding: 10px 16px;
-    font-size: 0.95rem;
+.hg-chart-title {
+    font-size: 1.2rem;
+    font-weight: 700;
     color: var(--color-text-primary);
-    background-color: var(--color-bg-subtle);
-    border: 1px solid var(--color-border-strong);
+    margin: 0;
+}
+
+/* --- Wrapper do Select com Largura Limitada e Tooltip --- */
+.hg-chart-select-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 320px;
+}
+
+.hg-chart-select {
+    width: 100%;
+    max-width: 320px;
+    padding: 9px 34px 9px 14px;
     border-radius: var(--radius-md);
-    outline: none;
-    cursor: pointer;
-    min-width: 220px;
-    transition: all 0.2s ease;
+    border: 1px solid var(--color-border-strong);
+    background-color: var(--color-bg-subtle);
+    color: var(--color-text-primary);
+    font-size: 0.88rem;
+    font-weight: 600;
     font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.hg-river-select:hover {
-    border-color: var(--color-text-subtle);
-}
-
-.hg-river-select:focus {
+.hg-chart-select:hover,
+.hg-chart-select:focus {
     border-color: var(--brand-primary);
     box-shadow: 0 0 0 3px var(--brand-primary-ring);
 }
 
-.hg-chart-container {
+/* Tooltip flutuante ao passar o mouse sobre o combo box */
+.hg-chart-select-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    z-index: 30;
+    background-color: #0f172a;
+    color: #f8fafc;
+    padding: 7px 11px;
+    border-radius: var(--radius-sm);
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.35;
+    width: max-content;
+    max-width: 360px;
+    white-space: normal;
+    word-break: break-word;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid #334155;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.hg-chart-select-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 24px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #0f172a transparent transparent transparent;
+}
+
+.hg-chart-select-wrapper:hover .hg-chart-select-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.hg-chart-body {
     width: 100%;
-    height: 400px;
+    height: 320px;
+}
+
+.hg-chart-empty {
+    height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
 }

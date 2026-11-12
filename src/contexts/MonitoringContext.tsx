@@ -14,7 +14,11 @@ import {
     fetchActiveAlerts,
     fetchCityRiskZones,
     fetchMappedCityTelemetry,
+    fetchSystemHealth,
     fetchWeatherForecast,
+    INITIAL_HEALTH_STATE,
+    probeSystemHealthLive,
+    resolveSystemHealthState,
     updateRiskZone,
 } from '../services';
 import type {
@@ -26,9 +30,18 @@ import type {
     RiskZoneInput,
     RiverData,
     RiverHistoryData,
+    SystemHealthState,
     TelemetryStationMarker,
 } from '../types';
-import { evaluateCityGlobalStatus } from '../utils';
+import {
+    CACHE_TTL,
+    evaluateCityGlobalStatus,
+    patchOperationalCache,
+    readCache,
+    readOperationalCache,
+    writeCache,
+    writeOperationalCache,
+} from '../utils';
 import {
     MonitoringContext,
     useAuth,
@@ -40,70 +53,168 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
     const { citySlug, coordinates, isLoadingTenant } = useTenant();
     const { authToken, handleAuthError } = useAuth();
 
-    const [rivers, setRivers] = useState<RiverData[]>([]);
-    const [stationMarkers, setStationMarkers] = useState<TelemetryStationMarker[]>([]);
-    const [historyData, setHistoryData] = useState<RiverHistoryData[]>([]);
-    const [rainData, setRainData] = useState<RainGaugeData | null>(null);
-    const [forecastData, setForecastData] = useState<DailyForecast[]>([]);
-    const [alerts, setAlerts] = useState<AlertData[]>([]);
-    const [riskZones, setRiskZones] = useState<RiskZone[]>([]);
-    const [isLoadingTelemetry, setIsLoadingTelemetry] = useState<boolean>(true);
-    const [isLoadingForecast, setIsLoadingForecast] = useState<boolean>(true);
-    const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+    const weatherCacheKey = `weather_${citySlug}`;
+
+    const initialOpsCache = useMemo(
+        () => readOperationalCache(citySlug),
+        [citySlug]
+    );
+    const initialWeatherCache = useMemo(
+        () => readCache<DailyForecast[]>(weatherCacheKey),
+        [weatherCacheKey]
+    );
+
+    const [rivers, setRivers] = useState<RiverData[]>(
+        () => initialOpsCache?.data.rivers ?? []
+    );
+    const [stationMarkers, setStationMarkers] = useState<TelemetryStationMarker[]>(
+        () => initialOpsCache?.data.stationMarkers ?? []
+    );
+    const [historyData, setHistoryData] = useState<RiverHistoryData[]>(
+        () => initialOpsCache?.data.historyData ?? []
+    );
+    const [rainData, setRainData] = useState<RainGaugeData | null>(
+        () => initialOpsCache?.data.rainData ?? null
+    );
+    const [alerts, setAlerts] = useState<AlertData[]>(
+        () => initialOpsCache?.data.alerts ?? []
+    );
+    const [riskZones, setRiskZones] = useState<RiskZone[]>(
+        () => initialOpsCache?.data.riskZones ?? []
+    );
+    const [systemHealth, setSystemHealth] = useState<SystemHealthState>(
+        () => initialOpsCache?.data.systemHealth ?? INITIAL_HEALTH_STATE
+    );
+    const [forecastData, setForecastData] = useState<DailyForecast[]>(
+        () => initialWeatherCache?.data ?? []
+    );
+
+    const [isLoadingTelemetry, setIsLoadingTelemetry] = useState<boolean>(
+        () => initialOpsCache === null
+    );
+    const [isLoadingForecast, setIsLoadingForecast] = useState<boolean>(
+        () => initialWeatherCache === null
+    );
+    const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(() =>
+        initialOpsCache ? new Date(initialOpsCache.updatedAt) : null
+    );
 
     const [lat, lng] = coordinates;
+
+    const checkSystemHealthNow = useCallback(async () => {
+        const liveHealth = await probeSystemHealthLive();
+        setSystemHealth(liveHealth);
+        patchOperationalCache(citySlug, { systemHealth: liveHealth });
+    }, [citySlug]);
 
     useEffect(() => {
         let isMounted = true;
 
-        async function loadCityOperationalData() {
-            const [telemetryResult, alertsResult, zonesResult] = await Promise.allSettled([
-                fetchMappedCityTelemetry(citySlug),
-                fetchActiveAlerts(citySlug),
-                fetchCityRiskZones(citySlug),
-            ]);
+        async function fetchAndCacheOperationalData() {
+            const [telemetryResult, alertsResult, zonesResult, healthResult] =
+                await Promise.allSettled([
+                    fetchMappedCityTelemetry(citySlug),
+                    fetchActiveAlerts(citySlug),
+                    fetchCityRiskZones(citySlug),
+                    fetchSystemHealth(),
+                ]);
 
             if (!isMounted) return;
 
-            if (telemetryResult.status === 'fulfilled') {
-                setRivers(telemetryResult.value.rivers);
-                setStationMarkers(telemetryResult.value.stationMarkers);
-                setHistoryData(telemetryResult.value.historyData);
-                setRainData(telemetryResult.value.rainData);
-            } else {
-                console.error('[HydroGuard] Erro ao carregar telemetria:', telemetryResult.reason);
-            }
+            const existing = readOperationalCache(citySlug)?.data;
+            const telemetrySucceeded = telemetryResult.status === 'fulfilled';
 
-            if (alertsResult.status === 'fulfilled') {
-                setAlerts(alertsResult.value);
-            } else {
-                console.error('[HydroGuard] Erro ao carregar alertas:', alertsResult.reason);
-            }
+            const nextRivers = telemetrySucceeded
+                ? telemetryResult.value.rivers
+                : (existing?.rivers ?? []);
 
-            if (zonesResult.status === 'fulfilled') {
-                setRiskZones(zonesResult.value);
-            } else {
-                console.error('[HydroGuard] Erro ao carregar zonas de risco:', zonesResult.reason);
-            }
+            const nextStationMarkers = telemetrySucceeded
+                ? telemetryResult.value.stationMarkers
+                : (existing?.stationMarkers ?? []);
 
+            const nextHistoryData = telemetrySucceeded
+                ? telemetryResult.value.historyData
+                : (existing?.historyData ?? []);
+
+            const nextRainData = telemetrySucceeded
+                ? telemetryResult.value.rainData
+                : (existing?.rainData ?? null);
+
+            const nextAlerts =
+                alertsResult.status === 'fulfilled'
+                    ? alertsResult.value
+                    : (existing?.alerts ?? []);
+
+            const nextRiskZones =
+                zonesResult.status === 'fulfilled'
+                    ? zonesResult.value
+                    : (existing?.riskZones ?? []);
+
+            const anyBackendCallWorked =
+                telemetrySucceeded ||
+                alertsResult.status === 'fulfilled' ||
+                zonesResult.status === 'fulfilled';
+
+            const nextHealth = resolveSystemHealthState(
+                healthResult,
+                anyBackendCallWorked,
+                nextRivers.length > 0
+            );
+
+            setRivers(nextRivers);
+            setStationMarkers(nextStationMarkers);
+            setHistoryData(nextHistoryData);
+            setRainData(nextRainData);
+            setAlerts(nextAlerts);
+            setRiskZones(nextRiskZones);
+            setSystemHealth(nextHealth);
             setLastUpdatedAt(new Date());
             setIsLoadingTelemetry(false);
+
+            if (nextRivers.length > 0) {
+                writeOperationalCache(citySlug, {
+                    rivers: nextRivers,
+                    stationMarkers: nextStationMarkers,
+                    historyData: nextHistoryData,
+                    rainData: nextRainData,
+                    alerts: nextAlerts,
+                    riskZones: nextRiskZones,
+                    systemHealth: nextHealth,
+                });
+            }
         }
 
-        void loadCityOperationalData();
+        async function revalidateCachedHealth() {
+            const liveHealth = await probeSystemHealthLive();
+            if (!isMounted) return;
+            setSystemHealth(liveHealth);
+            patchOperationalCache(citySlug, { systemHealth: liveHealth });
+        }
 
-        const intervalId = window.setInterval(() => {
-            void loadCityOperationalData();
+        const cached = readOperationalCache(citySlug);
+        if (!cached || cached.isExpired || cached.data.rivers.length === 0) {
+            void fetchAndCacheOperationalData();
+        } else if (cached.data.systemHealth.anaApiStatus !== 'ONLINE') {
+            void revalidateCachedHealth();
+        }
+
+        const telemetryIntervalId = window.setInterval(() => {
+            void fetchAndCacheOperationalData();
         }, APP_CONFIG.TELEMETRY_POLLING_INTERVAL_MS);
 
         return () => {
             isMounted = false;
-            window.clearInterval(intervalId);
+            window.clearInterval(telemetryIntervalId);
         };
     }, [citySlug]);
 
     useEffect(() => {
         if (isLoadingTenant) return;
+
+        const cachedWeather = readCache<DailyForecast[]>(weatherCacheKey);
+        if (cachedWeather && !cachedWeather.isExpired) {
+            return;
+        }
 
         let isMounted = true;
 
@@ -112,6 +223,7 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
                 const forecast = await fetchWeatherForecast(lat, lng);
                 if (isMounted) {
                     setForecastData(forecast);
+                    writeCache(weatherCacheKey, forecast, CACHE_TTL.WEATHER_MS);
                 }
             } catch (error) {
                 console.error('[HydroGuard] Erro ao carregar previsão meteorológica:', error);
@@ -127,21 +239,25 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
         return () => {
             isMounted = false;
         };
-    }, [isLoadingTenant, lat, lng]);
+    }, [isLoadingTenant, lat, lng, weatherCacheKey]);
 
     const publishAlert = useCallback(
         async (input: CreateAlertInput): Promise<AlertData> => {
             if (!authToken) throw new Error('Sessão de coordenador necessária.');
             try {
                 const created = await createOfficialAlert(authToken, input);
-                setAlerts((prev) => [created, ...prev]);
+                setAlerts((prev) => {
+                    const next = [created, ...prev];
+                    patchOperationalCache(citySlug, { alerts: next });
+                    return next;
+                });
                 return created;
             } catch (error) {
                 handleAuthError(error);
                 throw error;
             }
         },
-        [authToken, handleAuthError]
+        [authToken, citySlug, handleAuthError]
     );
 
     const deactivateAlert = useCallback(
@@ -149,13 +265,17 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
             if (!authToken) throw new Error('Sessão de coordenador necessária.');
             try {
                 await deactivateOfficialAlert(authToken, alertId);
-                setAlerts((prev) => prev.filter((item) => item.id !== alertId));
+                setAlerts((prev) => {
+                    const next = prev.filter((item) => item.id !== alertId);
+                    patchOperationalCache(citySlug, { alerts: next });
+                    return next;
+                });
             } catch (error) {
                 handleAuthError(error);
                 throw error;
             }
         },
-        [authToken, handleAuthError]
+        [authToken, citySlug, handleAuthError]
     );
 
     const addRiskZone = useCallback(
@@ -163,14 +283,18 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
             if (!authToken) throw new Error('Sessão de coordenador necessária.');
             try {
                 const created = await createRiskZone(authToken, input);
-                setRiskZones((prev) => [...prev, created]);
+                setRiskZones((prev) => {
+                    const next = [...prev, created];
+                    patchOperationalCache(citySlug, { riskZones: next });
+                    return next;
+                });
                 return created;
             } catch (error) {
                 handleAuthError(error);
                 throw error;
             }
         },
-        [authToken, handleAuthError]
+        [authToken, citySlug, handleAuthError]
     );
 
     const editRiskZone = useCallback(
@@ -178,14 +302,20 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
             if (!authToken) throw new Error('Sessão de coordenador necessária.');
             try {
                 const updated = await updateRiskZone(authToken, id, input);
-                setRiskZones((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+                setRiskZones((prev) => {
+                    const next = prev.map((item) =>
+                        item.id === updated.id ? updated : item
+                    );
+                    patchOperationalCache(citySlug, { riskZones: next });
+                    return next;
+                });
                 return updated;
             } catch (error) {
                 handleAuthError(error);
                 throw error;
             }
         },
-        [authToken, handleAuthError]
+        [authToken, citySlug, handleAuthError]
     );
 
     const removeRiskZone = useCallback(
@@ -193,13 +323,17 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
             if (!authToken) throw new Error('Sessão de coordenador necessária.');
             try {
                 await deleteRiskZone(authToken, id);
-                setRiskZones((prev) => prev.filter((item) => item.id !== id));
+                setRiskZones((prev) => {
+                    const next = prev.filter((item) => item.id !== id);
+                    patchOperationalCache(citySlug, { riskZones: next });
+                    return next;
+                });
             } catch (error) {
                 handleAuthError(error);
                 throw error;
             }
         },
-        [authToken, handleAuthError]
+        [authToken, citySlug, handleAuthError]
     );
 
     const globalStatus = useMemo(
@@ -217,9 +351,11 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
             alerts,
             riskZones,
             globalStatus,
+            systemHealth,
             isLoadingTelemetry,
             isLoadingForecast,
             lastUpdatedAt,
+            checkSystemHealthNow,
             publishAlert,
             deactivateAlert,
             addRiskZone,
@@ -235,9 +371,11 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
             alerts,
             riskZones,
             globalStatus,
+            systemHealth,
             isLoadingTelemetry,
             isLoadingForecast,
             lastUpdatedAt,
+            checkSystemHealthNow,
             publishAlert,
             deactivateAlert,
             addRiskZone,
@@ -247,6 +385,8 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
     );
 
     return (
-        <MonitoringContext.Provider value={value}>{children}</MonitoringContext.Provider>
+        <MonitoringContext.Provider value={value}>
+            {children}
+        </MonitoringContext.Provider>
     );
 }

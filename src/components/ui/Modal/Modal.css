@@ -69,7 +69,21 @@
     background-color: rgba(255, 255, 255, 0.1);
 }
 
+.hg-modal-card {
+    background: var(--color-bg-surface);
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    animation: hgModalSlideIn 0.22s ease-out;
+}
+
 .hg-modal-body {
     padding: 20px;
     overflow-y: auto;
+    overflow-x: hidden;
 }

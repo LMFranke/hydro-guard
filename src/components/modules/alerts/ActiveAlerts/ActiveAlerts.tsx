@@ -1,16 +1,23 @@
 import { useState, type FormEvent } from 'react';
 import {
     AlertTriangle,
+    Check,
     CheckCircle,
     Clock,
+    Copy,
     Info,
     MapPin,
     Plus,
+    Share2,
     ShieldAlert,
 } from 'lucide-react';
 import { useAuth, useMonitoring, useTenant } from '../../../../contexts';
-import type { OfficialAlertSeverity } from '../../../../types';
-import { OFFICIAL_ALERT_SEVERITY_LABELS } from '../../../../utils';
+import type { AlertData, OfficialAlertSeverity } from '../../../../types';
+import {
+    buildWhatsAppShareUrl,
+    formatAlertBulletinText,
+    OFFICIAL_ALERT_SEVERITY_LABELS,
+} from '../../../../utils';
 import { Badge, Button, Modal, type BadgeVariant } from '../../../ui';
 import './ActiveAlerts.css';
 
@@ -33,12 +40,26 @@ export function ActiveAlerts() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
+    const [copiedAlertId, setCopiedAlertId] = useState<string | null>(null);
 
     const [title, setTitle] = useState('');
     const [severity, setSeverity] = useState<OfficialAlertSeverity>('WARNING');
     const [region, setRegion] = useState('');
     const [description, setDescription] = useState('');
     const [instructionsText, setInstructionsText] = useState('');
+
+    const handleCopyBulletin = async (alertItem: AlertData) => {
+        try {
+            const bulletinText = formatAlertBulletinText(alertItem, cityDisplayName);
+            await navigator.clipboard.writeText(bulletinText);
+            setCopiedAlertId(alertItem.id);
+            window.setTimeout(() => {
+                setCopiedAlertId((prev) => (prev === alertItem.id ? null : prev));
+            }, 2500);
+        } catch {
+            // Ignora caso o navegador bloqueie área de transferência
+        }
+    };
 
     const handleCreateAlert = async (e: FormEvent) => {
         e.preventDefault();
@@ -121,6 +142,11 @@ export function ActiveAlerts() {
                     {alerts.map((alertItem) => {
                         const severityKey =
                             alertItem.severity.toLowerCase() as BadgeVariant;
+                        const isCopied = copiedAlertId === alertItem.id;
+                        const whatsAppUrl = buildWhatsAppShareUrl(
+                            alertItem,
+                            cityDisplayName
+                        );
 
                         return (
                             <article
@@ -171,6 +197,31 @@ export function ActiveAlerts() {
                                         ))}
                                     </ul>
                                 </div>
+
+                                <footer className="hg-alert-share-footer">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        leftIcon={
+                                            isCopied ? <Check size={14} /> : <Copy size={14} />
+                                        }
+                                        onClick={() => handleCopyBulletin(alertItem)}
+                                        title="Copiar boletim formatado para área de transferência"
+                                    >
+                                        {isCopied ? 'Comunicado Copiado!' : 'Copiar Comunicado'}
+                                    </Button>
+
+                                    <a
+                                        href={whatsAppUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="hg-whatsapp-link"
+                                        title="Compartilhar alerta oficial no WhatsApp"
+                                    >
+                                        <Share2 size={14} />
+                                        <span>Compartilhar no WhatsApp</span>
+                                    </a>
+                                </footer>
                             </article>
                         );
                     })}

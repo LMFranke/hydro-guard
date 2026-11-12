@@ -5,9 +5,10 @@
     background-color: var(--color-bg-app);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
     .hg-app-container {
         flex-direction: row;
+        align-items: stretch;
     }
 }
 

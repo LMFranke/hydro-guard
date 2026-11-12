@@ -11,6 +11,7 @@ import type {
     RiskZoneInput,
     RiverData,
     RiverHistoryData,
+    SystemHealthState,
     TelemetryStationMarker,
 } from '../types';
 
@@ -44,9 +45,11 @@ export interface MonitoringContextValue {
     alerts: AlertData[];
     riskZones: RiskZone[];
     globalStatus: CityStatusSummary;
+    systemHealth: SystemHealthState;
     isLoadingTelemetry: boolean;
     isLoadingForecast: boolean;
     lastUpdatedAt: Date | null;
+    checkSystemHealthNow: () => Promise<void>;
     publishAlert: (input: CreateAlertInput) => Promise<AlertData>;
     deactivateAlert: (alertId: string) => Promise<void>;
     addRiskZone: (input: RiskZoneInput) => Promise<RiskZone>;

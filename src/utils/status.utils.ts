@@ -36,9 +36,6 @@ export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
     LOW: 'Baixo',
 };
 
-/**
- * Calcula o status global do município com base nos rios monitorados e alertas ativos.
- */
 export function evaluateCityGlobalStatus(
     rivers: RiverData[],
     alerts: AlertData[]
@@ -62,9 +59,6 @@ export function evaluateCityGlobalStatus(
     return { status: 'NORMAL', label: 'Normal', badgeVariant: 'normal' };
 }
 
-/**
- * Converte o status bruto vindo do backend de telemetria para o tipo estrito RiverStatus.
- */
 export function mapBackendStationStatus(rawStatus: string): RiverStatus {
     switch (rawStatus.toUpperCase()) {
         case 'CRITICAL':
@@ -79,9 +73,6 @@ export function mapBackendStationStatus(rawStatus: string): RiverStatus {
     }
 }
 
-/**
- * Converte códigos meteorológicos WMO (Open-Meteo) em tipos visuais do sistema.
- */
 export function mapWmoToWeatherType(wmoCode: number): WeatherType {
     if (wmoCode >= 95) return 'STORMY';
     if (wmoCode >= 51 && wmoCode <= 82) return 'RAINY';
@@ -89,9 +80,6 @@ export function mapWmoToWeatherType(wmoCode: number): WeatherType {
     return 'SUNNY';
 }
 
-/**
- * Avalia a severidade diária da previsão com base no volume de chuva esperado (mm).
- */
 export function evaluateForecastSeverity(rainMm: number): ForecastSeverity {
     if (rainMm >= 60) return 'DANGER';
     if (rainMm >= 35) return 'WARNING';
@@ -99,9 +87,6 @@ export function evaluateForecastSeverity(rainMm: number): ForecastSeverity {
     return 'NORMAL';
 }
 
-/**
- * Retorna a cor hexadecimal do polígono/círculo no mapa Leaflet conforme camada e risco.
- */
 export function getRiskZoneColor(level: RiskLevel, layer: MapLayer): string {
     const palette: Record<MapLayer, Record<RiskLevel, string>> = {
         FLOOD: {
@@ -117,4 +102,60 @@ export function getRiskZoneColor(level: RiskLevel, layer: MapLayer): string {
     };
 
     return palette[layer][level];
+}
+
+/**
+ * Retorna a maior severidade entre os alertas ativos para estilizar o contador da Sidebar.
+ */
+export function getHighestAlertSeverity(
+    alerts: AlertData[]
+): OfficialAlertSeverity | null {
+    if (alerts.length === 0) return null;
+    if (alerts.some((a) => a.severity === 'CRITICAL')) return 'CRITICAL';
+    if (alerts.some((a) => a.severity === 'WARNING')) return 'WARNING';
+    return 'WATCH';
+}
+
+/**
+ * Formata um alerta oficial em texto estruturado para divulgação no WhatsApp / Imprensa.
+ */
+export function formatAlertBulletinText(
+    alert: AlertData,
+    cityDisplayName: string
+): string {
+    const severityHeader: Record<OfficialAlertSeverity, string> = {
+        CRITICAL: '🚨 *ALERTA CRÍTICO - DEFESA CIVIL*',
+        WARNING: '⚠️ *AVISO DE ALERTA - DEFESA CIVIL*',
+        WATCH: 'ℹ️ *AVISO DE ATENÇÃO - DEFESA CIVIL*',
+    };
+
+    const guidelinesList = alert.instructions
+        .map((item) => `• ${item}`)
+        .join('\n');
+
+    return [
+        `${severityHeader[alert.severity]} (${cityDisplayName})`,
+        '',
+        `*Ocorrência:* ${alert.title}`,
+        `*Região Afetada:* ${alert.region}`,
+        `*Emitido em:* ${alert.issuedAt}`,
+        '',
+        `*Descrição:* ${alert.description}`,
+        '',
+        '*Orientações de Segurança:*',
+        guidelinesList,
+        '',
+        `🔗 _Monitoramento em tempo real via HydroGuard (${cityDisplayName})_`,
+    ].join('\n');
+}
+
+/**
+ * Gera a URL oficial de compartilhamento do WhatsApp com o comunicado codificado.
+ */
+export function buildWhatsAppShareUrl(
+    alert: AlertData,
+    cityDisplayName: string
+): string {
+    const text = formatAlertBulletinText(alert, cityDisplayName);
+    return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
 }
