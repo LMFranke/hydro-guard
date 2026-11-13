@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import defaultBannerFallback from '../assets/banner-rodeio.png';
-import defaultLogoFallback from '../assets/logo-rodeio.png';
+import defaultLogoFallback from '../assets/favicon.svg';
 import { APP_CONFIG } from '../config/env';
 import { fetchCityTenant } from '../services';
 import type { CityTenant } from '../types';
@@ -22,7 +22,6 @@ function findInitialCachedTenant(slug: string): CityTenant | null {
     const directCache = readCache<CityTenant>(`tenant_${slug}`);
     if (directCache) return directCache.data;
 
-    // Aproveita a lista já carregada no Mapa de SC se existir
     const portalList = readCache<CityTenant[]>('portal_cities_list');
     if (portalList) {
         const found = portalList.data.find((c) => c.slug === slug);
@@ -46,30 +45,33 @@ export function TenantProvider({ citySlug, children }: TenantProviderProps) {
 
     useEffect(() => {
         let isMounted = true;
-        const cached = readCache<CityTenant>(`tenant_${citySlug}`);
 
+        const cached = readCache<CityTenant>(`tenant_${citySlug}`);
         if (cached) {
             applyTenantBranding(cached.data);
-            if (!cached.isExpired) {
-                return () => {
-                    isMounted = false;
-                };
-            }
         }
 
         async function loadTenantData() {
             try {
                 const data = await fetchCityTenant(citySlug);
                 if (!isMounted) return;
+
                 setTenant(data);
                 setTenantError(null);
                 writeCache(`tenant_${citySlug}`, data, CACHE_TTL.TENANT_MS);
                 applyTenantBranding(data);
             } catch (error) {
-                console.error(`[HydroGuard] Falha ao carregar tenant "${citySlug}":`, error);
+                console.error(
+                    `[HydroGuard] Falha ao carregar tenant "${citySlug}":`,
+                    error
+                );
                 if (!isMounted) return;
-                setTenantError(`O município "${citySlug}" não está cadastrado na plataforma.`);
-                applyTenantBranding(null);
+                if (!cached) {
+                    setTenantError(
+                        `O município "${citySlug}" não está cadastrado na plataforma.`
+                    );
+                    applyTenantBranding(null);
+                }
             } finally {
                 if (isMounted) {
                     setIsLoadingTenant(false);
@@ -89,12 +91,12 @@ export function TenantProvider({ citySlug, children }: TenantProviderProps) {
 
         const bannerUrl =
             tenant?.bannerUrl && tenant.bannerUrl.trim() !== ''
-                ? tenant.bannerUrl
+                ? tenant.bannerUrl.trim()
                 : defaultBannerFallback;
 
         const logoUrl =
             tenant?.logoUrl && tenant.logoUrl.trim() !== ''
-                ? tenant.logoUrl
+                ? tenant.logoUrl.trim()
                 : defaultLogoFallback;
 
         const coordinates: [number, number] = [
@@ -114,5 +116,7 @@ export function TenantProvider({ citySlug, children }: TenantProviderProps) {
         };
     }, [citySlug, tenant, isLoadingTenant, tenantError]);
 
-    return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
+    return (
+        <TenantContext.Provider value={value}>{children}</TenantContext.Provider>
+    );
 }

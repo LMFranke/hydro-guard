@@ -1,3 +1,4 @@
+import defaultBannerFallback from '../../../assets/banner-rodeio.png';
 import { useMonitoring, useTenant } from '../../../contexts';
 import { Badge, type BadgeVariant } from '../../ui';
 import './PageHeader.css';
@@ -12,7 +13,7 @@ export function PageHeader() {
         <header
             className="hg-page-header"
             style={{
-                backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.9)), url(${bannerUrl})`,
+                backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.9)), url("${bannerUrl}"), url("${defaultBannerFallback}")`,
             }}
         >
             <div className="hg-header-titles">

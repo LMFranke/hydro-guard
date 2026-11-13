@@ -25,7 +25,7 @@ export interface CachedOperationalSnapshot {
 }
 
 const memoryCache = new Map<string, CacheEntry<unknown>>();
-const STORAGE_PREFIX = 'hg_cache_v3:';
+const STORAGE_PREFIX = 'hg_cache_v6:';
 
 export const CACHE_TTL = {
     TELEMETRY_MS: 5 * 60 * 1000,   // 5 min

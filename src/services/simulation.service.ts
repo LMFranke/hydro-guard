@@ -113,7 +113,7 @@ export async function fetchCityHydrologyMesh(
     citySlug: string,
     center: [number, number]
 ): Promise<CityHydrologyMesh> {
-    const cacheKey = `hydro_mesh_v1_${citySlug}`;
+    const cacheKey = `hydro_mesh_v2_${citySlug}`;
     const cached = readCache<CityHydrologyMesh>(cacheKey);
 
     if (cached && !cached.isExpired && cached.data.segments.length > 0) {
@@ -121,7 +121,7 @@ export async function fetchCityHydrologyMesh(
     }
 
     const [lat, lng] = center;
-    const query = `[out:json][timeout:12];(way["waterway"~"^(river|stream|canal)$"](around:7500,${lat},${lng}););out body geom;`;
+    const query = `[out:json][timeout:18];(way["waterway"~"^(river|stream|canal)$"](around:7500,${lat},${lng}););out body geom;`;
 
     for (const endpoint of OVERPASS_ENDPOINTS) {
         try {
@@ -144,27 +144,19 @@ export async function fetchCityHydrologyMesh(
                 return mesh;
             }
         } catch {
-            // Tenta o próximo mirror
+            // Tenta o próximo mirror oficial da Overpass API
         }
     }
 
-    if (cached?.data) {
-        return cached.data;
-    }
-
-    return buildFallbackHydrologyMesh(citySlug, center);
+    return cached?.data ?? { citySlug, center, segments: [] };
 }
 
-/**
- * Busca as vias urbanas do município no OpenStreetMap e calcula a cota topográfica
- * em que cada rua começa a ser atingida pela inundação.
- */
 export async function fetchCityStreetQuotaCatalog(
     citySlug: string,
     center: [number, number],
     hydroMesh: CityHydrologyMesh
 ): Promise<SimulatedStreetSegment[]> {
-    const cacheKey = `street_quotas_v1_${citySlug}`;
+    const cacheKey = `street_quotas_v2_${citySlug}`;
     const cached = readCache<SimulatedStreetSegment[]>(cacheKey);
 
     if (cached && !cached.isExpired && cached.data.length > 0) {
@@ -172,7 +164,7 @@ export async function fetchCityStreetQuotaCatalog(
     }
 
     const [lat, lng] = center;
-    const query = `[out:json][timeout:14];(way["highway"~"^(primary|secondary|tertiary|residential|trunk|living_street)$"]["name"](around:4800,${lat},${lng}););out body geom;`;
+    const query = `[out:json][timeout:18];(way["highway"~"^(primary|secondary|tertiary|residential|trunk|living_street)$"]["name"](around:4800,${lat},${lng}););out body geom;`;
 
     for (const endpoint of OVERPASS_ENDPOINTS) {
         try {
@@ -198,15 +190,11 @@ export async function fetchCityStreetQuotaCatalog(
                 return streets;
             }
         } catch {
-            // Tenta o próximo mirror
+            // Tenta o próximo mirror oficial da Overpass API
         }
     }
 
-    if (cached?.data) {
-        return cached.data;
-    }
-
-    return buildFallbackStreetsCatalog(citySlug, center);
+    return cached?.data ?? [];
 }
 
 /**
@@ -584,65 +572,6 @@ function parseOverpassWaterways(
     }
 
     return segments;
-}
-
-function buildFallbackHydrologyMesh(
-    citySlug: string,
-    center: [number, number]
-): CityHydrologyMesh {
-    const [lat, lng] = center;
-    const mainRiverPoints: [number, number][] = [];
-
-    for (let i = -20; i <= 20; i++) {
-        const t = i * 0.0025;
-        const curveLat = lat + t * 0.55 + Math.sin(i * 0.45) * 0.0022;
-        const curveLng = lng + t + Math.cos(i * 0.35) * 0.0018;
-        mainRiverPoints.push([curveLat, curveLng]);
-    }
-
-    return {
-        citySlug,
-        center,
-        segments: [
-            {
-                id: `fallback-river-${citySlug}`,
-                name: 'Calha Principal',
-                kind: 'river',
-                channelWidthMeters: 48,
-                points: mainRiverPoints,
-            },
-        ],
-    };
-}
-
-function buildFallbackStreetsCatalog(
-    citySlug: string,
-    center: [number, number]
-): SimulatedStreetSegment[] {
-    const [lat, lng] = center;
-    const templates = [
-        { name: 'Avenida Beira Rio', suburb: 'Centro', quota: 3.4, dLat: 0.0008, dLng: 0.0012 },
-        { name: 'Rua XV de Novembro', suburb: 'Centro', quota: 5.2, dLat: -0.0014, dLng: 0.0018 },
-        { name: 'Rua das Palmeiras', suburb: 'Centro', quota: 6.1, dLat: 0.0021, dLng: -0.0015 },
-        { name: 'Rua Sete de Setembro', suburb: 'Centro', quota: 7.4, dLat: -0.0025, dLng: -0.0022 },
-        { name: 'Rua São Paulo', suburb: 'Victor Konder', quota: 8.6, dLat: 0.0032, dLng: 0.0028 },
-        { name: 'Rua Itajaí', suburb: 'Vorstadt', quota: 9.5, dLat: -0.0018, dLng: 0.0042 },
-    ];
-
-    return templates.map((tpl, idx) => {
-        const p1: [number, number] = [lat + tpl.dLat, lng + tpl.dLng];
-        const p2: [number, number] = [lat + tpl.dLat + 0.0015, lng + tpl.dLng + 0.0022];
-        return {
-            id: `fallback-st-${citySlug}-${idx}`,
-            name: tpl.name,
-            neighborhood: tpl.suburb,
-            highwayType: 'secondary',
-            focusPoint: p1,
-            polylines: [[p1, p2]],
-            distanceToRiverMeters: 80 + idx * 65,
-            baseEffectiveQuotaMeters: tpl.quota,
-        };
-    });
 }
 
 export function fetchDecodedElevationTile(

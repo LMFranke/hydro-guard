@@ -19,6 +19,8 @@ import { useAuth, useMonitoring, useTenant } from '../../../contexts';
 import type { ServiceOperationalStatus } from '../../../types';
 import { getHighestAlertSeverity } from '../../../utils';
 import { Button, Modal } from '../../ui';
+import defaultLogoFallback from '../../../assets/favicon.svg';
+
 import './Sidebar.css';
 
 const STATUS_UI_MAP: Record<
@@ -139,6 +141,11 @@ export function Sidebar() {
                             src={logoUrl}
                             alt={`Brasão / Logo de ${cityDisplayName}`}
                             className="hg-city-logo"
+                            onError={(e) => {
+                                if (e.currentTarget.src !== defaultLogoFallback) {
+                                    e.currentTarget.src = defaultLogoFallback;
+                                }
+                            }}
                         />
                     </div>
                     <h2 className="hg-sidebar-brand-title">HYDROGUARD</h2>

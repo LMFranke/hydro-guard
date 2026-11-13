@@ -263,8 +263,8 @@ function calculateDistanceKmBetween(
 }
 
 /**
- * Gera os perfis de simulação mantendo APENAS as estações localizadas dentro
- * do município do contexto atual (sem o raio regional de 30 km).
+ * Gera os perfis de simulação utilizando exclusivamente estações reais da ANA,
+ * priorizando as estações localizadas dentro do território do município atual.
  */
 export function buildSimulationStationProfiles(
     rivers: RiverData[],
@@ -273,14 +273,19 @@ export function buildSimulationStationProfiles(
     cityCenter: [number, number],
     cityName: string
 ): SimulationStationProfile[] {
+    if (rivers.length === 0) {
+        return [];
+    }
+
     const normCity = normalizeTextSimple(cityName.split('-')[0] ?? cityName);
-    const MAX_LOCAL_CITY_RADIUS_KM = 9.0;
+    const MAX_LOCAL_CITY_RADIUS_KM = 10.0;
 
     const markerMap = new Map<string, TelemetryStationMarker>();
     for (const m of stationMarkers) {
         markerMap.set(m.stationCode, m);
     }
 
+    // 1. Filtra estações reais localizadas dentro do município atual
     const localRivers = rivers.filter((river) => {
         const normLocation = normalizeTextSimple(river.location);
 
@@ -296,38 +301,27 @@ export function buildSimulationStationProfiles(
         const marker = markerMap.get(river.id);
         if (!marker) return false;
 
-        const distanceKm = calculateDistanceKmBetween(
-            cityCenter,
-            marker.coordinates
+        return (
+            calculateDistanceKmBetween(cityCenter, marker.coordinates) <=
+            MAX_LOCAL_CITY_RADIUS_KM
         );
-        return distanceKm <= MAX_LOCAL_CITY_RADIUS_KM;
     });
 
-    if (localRivers.length === 0) {
-        const fallbackThresholds: RiverThresholds = {
-            attention: 4.0,
-            warning: 6.0,
-            emergency: 8.0,
-        };
-        const primaryRiverName = rivers[0]?.name ?? `Rio Principal - ${cityName}`;
+    const targetRivers =
+        localRivers.length > 0
+            ? localRivers
+            : [...rivers]
+                .sort((a, b) => {
+                    const coordsA = markerMap.get(a.id)?.coordinates ?? cityCenter;
+                    const coordsB = markerMap.get(b.id)?.coordinates ?? cityCenter;
+                    return (
+                        calculateDistanceKmBetween(cityCenter, coordsA) -
+                        calculateDistanceKmBetween(cityCenter, coordsB)
+                    );
+                })
+                .slice(0, 2);
 
-        return [
-            {
-                stationId: `local-${normCity.toLowerCase()}`,
-                riverName: primaryRiverName,
-                stationName: `Sede Municipal de ${cityName}`,
-                displayLabel: `${primaryRiverName} (${cityName})`,
-                coordinates: cityCenter,
-                currentLevel: 2.2,
-                minScaleMeters: 0,
-                maxScaleMeters: 12,
-                thresholds: fallbackThresholds,
-                brackets: buildSimulationQuotaBrackets(fallbackThresholds, 2.2, 0),
-            },
-        ];
-    }
-
-    const sortedLocalRivers = [...localRivers].sort((a, b) => {
+    const sortedRivers = [...targetRivers].sort((a, b) => {
         const aHasCityName = normalizeTextSimple(a.location).includes(normCity);
         const bHasCityName = normalizeTextSimple(b.location).includes(normCity);
         if (aHasCityName !== bHasCityName) return aHasCityName ? -1 : 1;
@@ -341,7 +335,7 @@ export function buildSimulationStationProfiles(
         return 0;
     });
 
-    return sortedLocalRivers.map((river) => {
+    return sortedRivers.map((river) => {
         const matchedHistory = historyData.find((h) => h.riverId === river.id);
         const marker = markerMap.get(river.id);
         const currentLevel = Number(river.currentLevel.toFixed(2));
