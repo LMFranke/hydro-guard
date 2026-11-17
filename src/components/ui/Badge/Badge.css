@@ -64,6 +64,11 @@
     color: #ffffff;
 }
 
+.hg-badge-solid-watch {
+    background-color: #eab308;
+    color: #0f172a;
+}
+
 .hg-badge-solid-warning {
     background-color: #f59e0b;
     color: #ffffff;
@@ -72,4 +77,10 @@
 .hg-badge-solid-critical {
     background-color: var(--status-critical-fg);
     color: #ffffff;
+}
+
+.hg-badge-solid-neutral {
+    background-color: #475569;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
 }

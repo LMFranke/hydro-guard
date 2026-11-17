@@ -1,4 +1,5 @@
 .hg-page-header {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
@@ -8,10 +9,26 @@
     min-height: 240px;
     padding: 2.25rem;
     border-radius: var(--radius-lg);
+    background-color: #0f172a;
     background-size: cover;
     background-position: center;
+    background-repeat: no-repeat;
     color: var(--color-text-on-dark);
     box-shadow: var(--shadow-md);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hg-page-header.is-institutional-fallback {
+    background-image:
+            radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+            linear-gradient(
+                    135deg,
+                    #0f172a 0%,
+                    color-mix(in srgb, var(--brand-primary) 42%, #0f172a) 55%,
+                    #0b1120 100%
+            );
+    background-size: 24px 24px, cover;
+    background-repeat: repeat, no-repeat;
 }
 
 .hg-header-titles h1 {

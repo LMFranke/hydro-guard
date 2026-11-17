@@ -10,21 +10,23 @@ export type BadgeVariant =
     | 'below'
     | 'neutral'
     | 'solid-normal'
+    | 'solid-watch'
     | 'solid-warning'
-    | 'solid-critical';
+    | 'solid-critical'
+    | 'solid-neutral';
 
 export interface BadgeProps {
-    variant: BadgeVariant;
+    variant?: BadgeVariant;
     block?: boolean;
-    className?: string;
     children: ReactNode;
+    className?: string;
 }
 
 export function Badge({
-                          variant,
+                          variant = 'normal',
                           block = false,
-                          className = '',
                           children,
+                          className = '',
                       }: BadgeProps) {
     const classes = [
         'hg-badge',

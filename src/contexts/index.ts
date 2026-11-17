@@ -19,7 +19,7 @@ export interface TenantContextValue {
     citySlug: string;
     tenant: CityTenant | null;
     cityDisplayName: string;
-    bannerUrl: string;
+    bannerUrl: string | null;
     logoUrl: string;
     coordinates: [number, number];
     isLoadingTenant: boolean;
@@ -43,6 +43,7 @@ export interface MonitoringContextValue {
     rainData: RainGaugeData | null;
     forecastData: DailyForecast[];
     alerts: AlertData[];
+    alertHistory: AlertData[];
     riskZones: RiskZone[];
     globalStatus: CityStatusSummary;
     systemHealth: SystemHealthState;
@@ -50,6 +51,7 @@ export interface MonitoringContextValue {
     isLoadingForecast: boolean;
     lastUpdatedAt: Date | null;
     checkSystemHealthNow: () => Promise<void>;
+    toggleAnaOutageSimulation: (active: boolean) => Promise<void>;
     publishAlert: (input: CreateAlertInput) => Promise<AlertData>;
     deactivateAlert: (alertId: string) => Promise<void>;
     addRiskZone: (input: RiskZoneInput) => Promise<RiskZone>;
@@ -57,14 +59,22 @@ export interface MonitoringContextValue {
     removeRiskZone: (id: string) => Promise<void>;
 }
 
-export const TenantContext = createContext<TenantContextValue | undefined>(undefined);
-export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-export const MonitoringContext = createContext<MonitoringContextValue | undefined>(undefined);
+export const TenantContext = createContext<TenantContextValue | undefined>(
+    undefined
+);
+export const AuthContext = createContext<AuthContextValue | undefined>(
+    undefined
+);
+export const MonitoringContext = createContext<
+    MonitoringContextValue | undefined
+>(undefined);
 
 export function useTenant(): TenantContextValue {
     const context = useContext(TenantContext);
     if (!context) {
-        throw new Error('useTenant deve ser utilizado dentro de um TenantProvider.');
+        throw new Error(
+            'useTenant deve ser utilizado dentro de um TenantProvider.'
+        );
     }
     return context;
 }
@@ -80,7 +90,9 @@ export function useAuth(): AuthContextValue {
 export function useMonitoring(): MonitoringContextValue {
     const context = useContext(MonitoringContext);
     if (!context) {
-        throw new Error('useMonitoring deve ser utilizado dentro de um MonitoringProvider.');
+        throw new Error(
+            'useMonitoring deve ser utilizado dentro de um MonitoringProvider.'
+        );
     }
     return context;
 }

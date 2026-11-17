@@ -9,6 +9,13 @@ export async function fetchActiveAlerts(slug: string): Promise<AlertData[]> {
     return data.map(mapBackendAlertToUi);
 }
 
+export async function fetchAlertHistory(slug: string): Promise<AlertData[]> {
+    const data = await httpClient.get<BackendAlertDTO[]>(
+        `/alerts/${encodeURIComponent(slug)}/history`
+    );
+    return data.map(mapBackendAlertToUi);
+}
+
 export async function createOfficialAlert(
     token: string,
     alertInput: CreateAlertInput
@@ -24,10 +31,11 @@ export async function createOfficialAlert(
 export async function deactivateOfficialAlert(
     token: string,
     alertId: string
-): Promise<void> {
-    return httpClient.patch<void>(
+): Promise<AlertData | undefined> {
+    const updated = await httpClient.patch<BackendAlertDTO | undefined>(
         `/alerts/${encodeURIComponent(alertId)}/deactivate`,
         undefined,
         { token, requiresAuth: true }
     );
+    return updated ? mapBackendAlertToUi(updated) : undefined;
 }

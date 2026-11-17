@@ -1,4 +1,3 @@
-import defaultBannerFallback from '../../../assets/banner-rodeio.png';
 import { useMonitoring, useTenant } from '../../../contexts';
 import { Badge, type BadgeVariant } from '../../ui';
 import './PageHeader.css';
@@ -9,12 +8,16 @@ export function PageHeader() {
 
     const solidVariant: BadgeVariant = `solid-${globalStatus.badgeVariant}`;
 
+    const headerStyle = bannerUrl
+        ? {
+            backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.9)), url("${bannerUrl}")`,
+        }
+        : undefined;
+
     return (
         <header
-            className="hg-page-header"
-            style={{
-                backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.9)), url("${bannerUrl}"), url("${defaultBannerFallback}")`,
-            }}
+            className={`hg-page-header ${!bannerUrl ? 'is-institutional-fallback' : ''}`}
+            style={headerStyle}
         >
             <div className="hg-header-titles">
                 <h1>Painel de Monitorização</h1>

@@ -46,9 +46,15 @@ export function RiverChart({ data }: RiverChartProps) {
     return (
         <section className="hg-chart-card" aria-label="Nível nas Últimas 24 Horas">
             <header className="hg-chart-header">
-                <div className="hg-chart-title-group">
-                    <span className="hg-chart-indicator" />
-                    <h2 className="hg-chart-title">Nível nas Últimas 24 Horas</h2>
+                <div>
+                    <div className="hg-chart-title-group">
+                        <span className="hg-chart-indicator" />
+                        <h2 className="hg-chart-title">Nível nas Últimas 24 Horas</h2>
+                    </div>
+                    <p className="hg-data-provenance-line" style={{ marginLeft: '14px' }}>
+                        Fonte: {currentRiver.source} • Unidade: metros (m) • Última leitura:{' '}
+                        <strong>{currentRiver.lastUpdate}</strong>
+                    </p>
                 </div>
 
                 <div className="hg-chart-select-wrapper">
@@ -105,6 +111,7 @@ export function RiverChart({ data }: RiverChartProps) {
                             tick={{ fill: '#64748b', fontSize: 12 }}
                             tickLine={false}
                         />
+
                         <Tooltip
                             formatter={(value) => [
                                 `${Number(value ?? 0).toFixed(2)}m`,

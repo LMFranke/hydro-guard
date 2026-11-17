@@ -20,12 +20,13 @@ export interface CachedOperationalSnapshot {
     historyData: RiverHistoryData[];
     rainData: RainGaugeData | null;
     alerts: AlertData[];
+    alertHistory?: AlertData[];
     riskZones: RiskZone[];
     systemHealth: SystemHealthState;
 }
 
 const memoryCache = new Map<string, CacheEntry<unknown>>();
-const STORAGE_PREFIX = 'hg_cache_v6:';
+const STORAGE_PREFIX = 'hg_cache_v7:';
 
 export const CACHE_TTL = {
     TELEMETRY_MS: 5 * 60 * 1000,   // 5 min

@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, type ReactNode } from 'react';
-import defaultBannerFallback from '../assets/banner-rodeio.png';
 import defaultLogoFallback from '../assets/favicon.svg';
 import { APP_CONFIG } from '../config/env';
 import { fetchCityTenant } from '../services';
@@ -68,7 +67,7 @@ export function TenantProvider({ citySlug, children }: TenantProviderProps) {
                 if (!isMounted) return;
                 if (!cached) {
                     setTenantError(
-                        `O município "${citySlug}" não está cadastrado na plataforma.`
+                        `O município "${citySlug}" não está integrado à plataforma estadual.`
                     );
                     applyTenantBranding(null);
                 }
@@ -92,7 +91,7 @@ export function TenantProvider({ citySlug, children }: TenantProviderProps) {
         const bannerUrl =
             tenant?.bannerUrl && tenant.bannerUrl.trim() !== ''
                 ? tenant.bannerUrl.trim()
-                : defaultBannerFallback;
+                : null;
 
         const logoUrl =
             tenant?.logoUrl && tenant.logoUrl.trim() !== ''

@@ -1,7 +1,25 @@
-import type { AlertData, BackendAlertDTO, CreateAlertInput } from '../../types';
+import type {
+    AlertData,
+    AlertLifecycleStatus,
+    BackendAlertDTO,
+    CreateAlertInput,
+} from '../../types';
 import { formatAlertIssuedAt } from '../../utils';
 
 const DEFAULT_INSTRUCTION = 'Siga as orientações oficiais da Defesa Civil.';
+
+function resolveLifecycleStatus(dto: BackendAlertDTO): AlertLifecycleStatus {
+    if (dto.lifecycleStatus) {
+        return dto.lifecycleStatus;
+    }
+    if (!dto.active || dto.closedAt) {
+        return 'CLOSED';
+    }
+    if (dto.expiresAt && new Date(dto.expiresAt).getTime() < Date.now()) {
+        return 'EXPIRED';
+    }
+    return 'ACTIVE';
+}
 
 export function mapBackendAlertToUi(dto: BackendAlertDTO): AlertData {
     const parsedInstructions = dto.safetyGuidelines
@@ -11,6 +29,12 @@ export function mapBackendAlertToUi(dto: BackendAlertDTO): AlertData {
             .filter(Boolean)
         : [];
 
+    const hasValidCoords =
+        typeof dto.latitude === 'number' &&
+        typeof dto.longitude === 'number' &&
+        !Number.isNaN(dto.latitude) &&
+        !Number.isNaN(dto.longitude);
+
     return {
         id: dto.id,
         title: dto.title,
@@ -18,8 +42,16 @@ export function mapBackendAlertToUi(dto: BackendAlertDTO): AlertData {
         region: dto.region,
         description: dto.description,
         instructions:
-            parsedInstructions.length > 0 ? parsedInstructions : [DEFAULT_INSTRUCTION],
+            parsedInstructions.length > 0
+                ? parsedInstructions
+                : [DEFAULT_INSTRUCTION],
+        source: dto.source?.trim() || 'Defesa Civil Municipal',
         issuedAt: formatAlertIssuedAt(dto.createdAt),
+        updatedAt: formatAlertIssuedAt(dto.updatedAt ?? dto.createdAt),
+        expiresAt: dto.expiresAt ? formatAlertIssuedAt(dto.expiresAt) : null,
+        closedAt: dto.closedAt ? formatAlertIssuedAt(dto.closedAt) : null,
+        lifecycleStatus: resolveLifecycleStatus(dto),
+        coordinates: hasValidCoords ? [dto.latitude!, dto.longitude!] : null,
     };
 }
 
@@ -37,5 +69,9 @@ export function mapCreateAlertInputToPayload(input: CreateAlertInput) {
             cleanInstructions.length > 0
                 ? cleanInstructions.join('\n')
                 : DEFAULT_INSTRUCTION,
+        source: input.source?.trim() || undefined,
+        validityHours: input.validityHours ?? 12,
+        latitude: input.coordinates ? input.coordinates[0] : undefined,
+        longitude: input.coordinates ? input.coordinates[1] : undefined,
     };
 }

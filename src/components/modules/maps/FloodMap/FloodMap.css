@@ -1313,3 +1313,23 @@
         max-height: 310px;
     }
 }
+
+/* --- Aviso de Simulação Topográfica Ilustrativa (Etapa 3) --- */
+.hg-sim-disclaimer-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    margin-bottom: 8px;
+    border-radius: var(--radius-sm);
+    background-color: rgba(234, 179, 8, 0.16);
+    border: 1px solid rgba(250, 204, 21, 0.4);
+    color: #fef08a;
+    font-size: 0.72rem;
+    line-height: 1.35;
+}
+
+.hg-sim-disclaimer-banner svg {
+    flex-shrink: 0;
+    color: #facc15;
+}

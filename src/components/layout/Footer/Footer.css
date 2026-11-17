@@ -1,14 +1,17 @@
+.hg-main-content > *:nth-last-child(2) {
+    margin-bottom: 4rem;
+}
+
 .hg-footer {
     background-color: var(--color-bg-dark-elevated);
     color: #cbd5e1;
-    margin: 4rem -1.5rem -1.5rem -1.5rem;
+    margin: auto -1.5rem -1.5rem -1.5rem;
     padding: 3rem 1.5rem 1.5rem 1.5rem;
-    margin-top: auto;
 }
 
 @media (min-width: 1024px) {
     .hg-footer {
-        margin: 4rem -2.5rem -2.5rem -2.5rem;
+        margin: auto -2.5rem -2.5rem -2.5rem;
         padding: 3rem 2.5rem 1.5rem 2.5rem;
     }
 }

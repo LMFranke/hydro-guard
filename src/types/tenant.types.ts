@@ -14,14 +14,6 @@ export interface CityTenant {
     themeColor: string | null;
 }
 
-export type CityGlobalStatus = 'NORMAL' | 'WARNING' | 'CRITICAL';
-
-export interface CityStatusSummary {
-    status: CityGlobalStatus;
-    label: 'Normal' | 'Alerta' | 'Crítico';
-    badgeVariant: 'normal' | 'warning' | 'critical';
-}
-
 export type ServiceOperationalStatus =
     | 'ONLINE'
     | 'INSTABLE'
@@ -35,6 +27,7 @@ export interface SystemHealthDTO {
     checkedAt: string;
     lastAnaSuccessAt: string | null;
     message: string;
+    simulatedOutage?: boolean;
 }
 
 export interface SystemHealthState {
@@ -43,4 +36,5 @@ export interface SystemHealthState {
     anaLatencyMs: number | null;
     checkedAt: string | null;
     message: string;
+    simulatedOutage?: boolean;
 }

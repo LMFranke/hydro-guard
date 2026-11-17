@@ -15,6 +15,7 @@ import type {
     MapViewMode,
     RiskZone,
     RiskZoneInput,
+    SimulationStationProfile,
 } from '../../../../types';
 import {
     buildSimulationStationProfiles,
@@ -36,6 +37,8 @@ import { FloodSimulationLayer } from './layers/FloodSimulationLayer';
 import { FloodZonesLayer } from './layers/FloodZonesLayer';
 import { LandslideZonesLayer } from './layers/LandslideZonesLayer';
 import { TelemetryStationsLayer } from './layers/TelemetryStationsLayer';
+import { ActiveAlertsMapLayer } from './layers/ActiveAlertsMapLayer';
+
 import './FloodMap.css';
 
 export function FloodMap() {
@@ -44,6 +47,7 @@ export function FloodMap() {
     const {
         rivers,
         historyData,
+        alerts,
         riskZones,
         stationMarkers,
         addRiskZone,
@@ -63,14 +67,77 @@ export function FloodMap() {
         [rivers, historyData, stationMarkers, coordinates, tenant?.name, cityDisplayName]
     );
 
+    const defaultSimulationStation = useMemo<SimulationStationProfile>(() => {
+        const defaultThresholds = { attention: 4.0, warning: 6.0, emergency: 8.0 };
+        return {
+            stationId: `sim-fallback-${citySlug}`,
+            riverName: `Bacia Hidrográfica (${tenant?.name ?? cityDisplayName})`,
+            stationName: 'Referência Topográfica Local (Sem Leitura ANA)',
+            displayLabel: `Referência Local (${tenant?.name ?? cityDisplayName})`,
+            coordinates,
+            currentLevel: 2.0,
+            minScaleMeters: 0,
+            maxScaleMeters: 12,
+            thresholds: defaultThresholds,
+            brackets: [
+                {
+                    status: 'NORMAL',
+                    label: 'Normalidade',
+                    rangeText: 'de 0m a 3,2m',
+                    minMeters: 0,
+                    maxMeters: 3.2,
+                    color: '#10b981',
+                },
+                {
+                    status: 'OBSERVATION',
+                    label: 'Observação',
+                    rangeText: 'de 3,2m a 4m',
+                    minMeters: 3.2,
+                    maxMeters: 4.0,
+                    color: '#eab308',
+                },
+                {
+                    status: 'ATTENTION',
+                    label: 'Atenção',
+                    rangeText: 'de 4m a 6m',
+                    minMeters: 4.0,
+                    maxMeters: 6.0,
+                    color: '#f97316',
+                },
+                {
+                    status: 'ALERT',
+                    label: 'Alerta',
+                    rangeText: 'de 6m a 8m',
+                    minMeters: 6.0,
+                    maxMeters: 8.0,
+                    color: '#ef4444',
+                },
+                {
+                    status: 'MAX_ALERT',
+                    label: 'Alerta Máximo',
+                    rangeText: 'acima de 8m',
+                    minMeters: 8.0,
+                    maxMeters: null,
+                    color: '#9333ea',
+                },
+            ],
+        };
+    }, [citySlug, tenant?.name, cityDisplayName, coordinates]);
+
+    const effectiveSimulationStations =
+        simulationStations.length > 0
+            ? simulationStations
+            : [defaultSimulationStation];
+
     const [selectedStationId, setSelectedStationId] = useState<string>('');
     const [activeMode, setActiveMode] = useState<MapViewMode>('FLOOD');
 
     const selectedStation = useMemo(
         () =>
-            simulationStations.find((s) => s.stationId === selectedStationId) ??
-            simulationStations[0],
-        [simulationStations, selectedStationId]
+            effectiveSimulationStations.find(
+                (s) => s.stationId === selectedStationId
+            ) ?? effectiveSimulationStations[0],
+        [effectiveSimulationStations, selectedStationId]
     );
 
     const [simulatedLevel, setSimulatedLevel] = useState<number>(
@@ -310,7 +377,7 @@ export function FloodMap() {
                 {activeMode === 'SIMULATION' && (
                     <>
                         <SimulationControlBar
-                            stations={simulationStations}
+                            stations={effectiveSimulationStations}
                             selectedStation={selectedStation}
                             simulatedLevel={simulatedLevel}
                             activeBracket={activeQuotaBracket}
@@ -405,6 +472,7 @@ export function FloodMap() {
                     {showStations && (
                         <TelemetryStationsLayer stations={stationMarkers} />
                     )}
+                    <ActiveAlertsMapLayer alerts={alerts} cityCenter={coordinates} />
                 </MapContainer>
 
                 <button

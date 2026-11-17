@@ -23,7 +23,9 @@ export function RainAccumulation({ data }: RainAccumulationProps) {
                 </Badge>
             </header>
 
-            <p className="hg-rain-station">Pluviômetro: {data.stationName}</p>
+            <p className="hg-rain-station">
+                Pluviômetro: {data.stationName} • Fonte: {data.source}
+            </p>
 
             <div className="hg-tubes-container">
                 {data.measurements.map((measurement) => {
@@ -38,11 +40,13 @@ export function RainAccumulation({ data }: RainAccumulationProps) {
                                 <div className="hg-tick-mark" style={{ bottom: '25%' }} />
                                 <div className="hg-tick-mark" style={{ bottom: '50%' }} />
                                 <div className="hg-tick-mark" style={{ bottom: '75%' }} />
+
                                 <div
                                     className="hg-tube-fill"
                                     style={{
                                         height: `${fillPercentage}%`,
-                                        borderRadius: fillPercentage >= 98 ? '24px' : '0 0 24px 24px',
+                                        borderRadius:
+                                            fillPercentage >= 98 ? '24px' : '0 0 24px 24px',
                                     }}
                                 />
                             </div>
@@ -55,7 +59,9 @@ export function RainAccumulation({ data }: RainAccumulationProps) {
                   })}
                     <span className="unit">mm</span>
                 </span>
-                                <span className="hg-tube-period">{measurement.periodLabel}</span>
+                                <span className="hg-tube-period">
+                  {measurement.periodLabel}
+                </span>
                             </div>
                         </div>
                     );
@@ -64,8 +70,8 @@ export function RainAccumulation({ data }: RainAccumulationProps) {
 
             <footer className="hg-rain-footer">
                 <p>
-                    Escala das provetas: 0 a {data.maxScale} mm. Última hora fechada:{' '}
-                    {data.lastUpdated}.
+                    Unidade: milímetros (mm) • Escala das provetas: 0 a {data.maxScale}{' '}
+                    mm • Última leitura recebida: {data.lastUpdated}.
                 </p>
             </footer>
         </section>

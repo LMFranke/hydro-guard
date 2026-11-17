@@ -22,6 +22,16 @@ export const RIVER_STATUS_LABELS: Record<RiverStatus, string> = {
     BELOW: 'ABAIXO',
 };
 
+export const RIVER_STATUS_BADGE_VARIANT: Record<
+    RiverStatus,
+    'critical' | 'warning' | 'normal' | 'below'
+> = {
+    CRITICAL: 'critical',
+    WARNING: 'warning',
+    NORMAL: 'normal',
+    BELOW: 'below',
+};
+
 export const OFFICIAL_ALERT_SEVERITY_LABELS: Record<OfficialAlertSeverity, string> = {
     CRITICAL: 'CRÍTICO',
     WARNING: 'ALERTA',
@@ -45,23 +55,64 @@ export function evaluateCityGlobalStatus(
     rivers: RiverData[],
     alerts: AlertData[]
 ): CityStatusSummary {
-    const hasCritical =
-        rivers.some((r) => r.status === 'CRITICAL') ||
-        alerts.some((a) => a.severity === 'CRITICAL');
-
-    if (hasCritical) {
-        return { status: 'CRITICAL', label: 'Crítico', badgeVariant: 'critical' };
+    if (alerts.some((a) => a.severity === 'CRITICAL')) {
+        return {
+            status: 'CRITICAL',
+            label: 'Emergência',
+            badgeVariant: 'critical',
+        };
+    }
+    if (alerts.some((a) => a.severity === 'WARNING')) {
+        return {
+            status: 'ALERT',
+            label: 'Alerta',
+            badgeVariant: 'warning',
+        };
+    }
+    if (alerts.some((a) => a.severity === 'WATCH')) {
+        return {
+            status: 'WARNING',
+            label: 'Atenção',
+            badgeVariant: 'watch',
+        };
     }
 
-    const hasWarning =
-        rivers.some((r) => r.status === 'WARNING') ||
-        alerts.some((a) => a.severity === 'WARNING');
-
-    if (hasWarning) {
-        return { status: 'WARNING', label: 'Alerta', badgeVariant: 'warning' };
+    if (rivers.length === 0) {
+        return {
+            status: 'UNAVAILABLE',
+            label: 'Dado Indisponível',
+            badgeVariant: 'neutral',
+        };
     }
 
-    return { status: 'NORMAL', label: 'Normal', badgeVariant: 'normal' };
+    if (rivers.some((r) => r.status === 'CRITICAL')) {
+        return {
+            status: 'CRITICAL',
+            label: 'Emergência',
+            badgeVariant: 'critical',
+        };
+    }
+    if (rivers.some((r) => r.status === 'WARNING')) {
+        return {
+            status: 'WARNING',
+            label: 'Atenção',
+            badgeVariant: 'warning',
+        };
+    }
+
+    if (rivers.every((r) => r.isStale)) {
+        return {
+            status: 'STALE',
+            label: 'Leitura Desatualizada',
+            badgeVariant: 'watch',
+        };
+    }
+
+    return {
+        status: 'NORMAL',
+        label: 'Normal',
+        badgeVariant: 'normal',
+    };
 }
 
 export function mapBackendStationStatus(rawStatus: string): RiverStatus {

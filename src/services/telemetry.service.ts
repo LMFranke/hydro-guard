@@ -18,7 +18,7 @@ export interface MappedCityTelemetry {
     rivers: RiverData[];
     stationMarkers: TelemetryStationMarker[];
     historyData: RiverHistoryData[];
-    rainData: RainGaugeData;
+    rainData: RainGaugeData | null;
 }
 
 export async function fetchCityTelemetry(

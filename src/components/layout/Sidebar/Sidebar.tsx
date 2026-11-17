@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import {
     Activity,
@@ -9,18 +9,21 @@ import {
     Lock,
     LogOut,
     Map,
+    Menu,
     Radio,
     RefreshCw,
+    RotateCcw,
     Server,
     ShieldAlert,
     UserCheck,
+    WifiOff,
+    X,
 } from 'lucide-react';
+import defaultLogoFallback from '../../../assets/favicon.svg';
 import { useAuth, useMonitoring, useTenant } from '../../../contexts';
 import type { ServiceOperationalStatus } from '../../../types';
 import { getHighestAlertSeverity } from '../../../utils';
 import { Button, Modal } from '../../ui';
-import defaultLogoFallback from '../../../assets/favicon.svg';
-
 import './Sidebar.css';
 
 const STATUS_UI_MAP: Record<
@@ -36,8 +39,14 @@ const STATUS_UI_MAP: Record<
 export function Sidebar() {
     const { citySlug, cityDisplayName, logoUrl } = useTenant();
     const { session, isCoordinator, login, logout, updatePassword } = useAuth();
-    const { alerts, systemHealth, checkSystemHealthNow } = useMonitoring();
+    const {
+        alerts,
+        systemHealth,
+        checkSystemHealthNow,
+        toggleAnaOutageSimulation,
+    } = useMonitoring();
 
+    const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
     const [isCheckingHealth, setIsCheckingHealth] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -57,16 +66,69 @@ export function Sidebar() {
     const highestAlertSeverity = getHighestAlertSeverity(alerts);
 
     const navItems = [
-        { path: `/${citySlug}`, label: 'Dashboard', icon: LayoutDashboard, end: true },
-        { path: `/${citySlug}/weather`, label: 'Tempo e Clima', icon: CloudRain, end: false },
-        { path: `/${citySlug}/maps`, label: 'Mapas de Perigo', icon: Map, end: false },
-        { path: `/${citySlug}/alerts`, label: 'Alertas', icon: ShieldAlert, end: false },
+        {
+            path: `/${citySlug}`,
+            label: 'Dashboard',
+            icon: LayoutDashboard,
+            end: true,
+        },
+        {
+            path: `/${citySlug}/weather`,
+            label: 'Tempo e Clima',
+            icon: CloudRain,
+            end: false,
+        },
+        {
+            path: `/${citySlug}/maps`,
+            label: 'Mapas de Perigo',
+            icon: Map,
+            end: false,
+        },
+        {
+            path: `/${citySlug}/alerts`,
+            label: 'Alertas',
+            icon: ShieldAlert,
+            end: false,
+        },
     ];
+
+    // Bloqueia o scroll do fundo e permite fechar o drawer com ESC no mobile
+    useEffect(() => {
+        if (!isMobileDrawerOpen) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIsMobileDrawerOpen(false);
+            }
+        };
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isMobileDrawerOpen]);
+
+    const closeMobileDrawer = () => {
+        setIsMobileDrawerOpen(false);
+    };
 
     const handleManualHealthCheck = async () => {
         setIsCheckingHealth(true);
         try {
             await checkSystemHealthNow();
+        } finally {
+            setIsCheckingHealth(false);
+        }
+    };
+
+    const handleToggleOutageSimulation = async () => {
+        setIsCheckingHealth(true);
+        try {
+            await toggleAnaOutageSimulation(!systemHealth.simulatedOutage);
         } finally {
             setIsCheckingHealth(false);
         }
@@ -134,8 +196,81 @@ export function Sidebar() {
 
     return (
         <>
-            <aside className="hg-sidebar">
+            {/* Barra Superior Mobile (Visível apenas em telas < 768px) */}
+            <div className="hg-mobile-topbar">
+                <div className="hg-mobile-brand">
+                    <div className="hg-mobile-logo-box">
+                        <img
+                            src={logoUrl}
+                            alt={`Brasão de ${cityDisplayName}`}
+                            className="hg-mobile-logo-img"
+                            onError={(e) => {
+                                if (e.currentTarget.src !== defaultLogoFallback) {
+                                    e.currentTarget.src = defaultLogoFallback;
+                                }
+                            }}
+                        />
+                    </div>
+                    <div className="hg-mobile-titles">
+                        <span className="hg-mobile-app-name">HYDROGUARD</span>
+                        <span className="hg-mobile-city-name">{cityDisplayName}</span>
+                    </div>
+                </div>
+
+                <div className="hg-mobile-actions">
+                    {alerts.length > 0 && highestAlertSeverity && (
+                        <Link
+                            to={`/${citySlug}/alerts`}
+                            className={`hg-nav-alert-chip ${highestAlertSeverity.toLowerCase()}`}
+                            title={`${alerts.length} alerta(s) ativo(s)`}
+                        >
+                            <span className="hg-nav-alert-dot" />
+                            <span className="hg-nav-alert-count">{alerts.length}</span>
+                        </Link>
+                    )}
+
+                    <button
+                        type="button"
+                        className="hg-mobile-menu-btn"
+                        onClick={() => setIsMobileDrawerOpen(true)}
+                        aria-expanded={isMobileDrawerOpen}
+                        aria-controls="hg-main-sidebar"
+                        aria-label="Abrir menu de navegação"
+                    >
+                        <Menu size={22} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Overlay Escuro quando o Drawer está aberto no Mobile */}
+            {isMobileDrawerOpen && (
+                <div
+                    className="hg-sidebar-backdrop"
+                    onClick={closeMobileDrawer}
+                    aria-hidden="true"
+                />
+            )}
+
+            {/* Sidebar Fixa no Desktop / Drawer Deslizante no Mobile */}
+            <aside
+                id="hg-main-sidebar"
+                className={`hg-sidebar ${isMobileDrawerOpen ? 'is-drawer-open' : ''}`}
+            >
                 <div className="hg-sidebar-header">
+                    <div className="hg-sidebar-mobile-close-row">
+            <span className="hg-nav-group-label" style={{ marginBottom: 0 }}>
+              Navegação Institucional
+            </span>
+                        <button
+                            type="button"
+                            className="hg-drawer-close-btn"
+                            onClick={closeMobileDrawer}
+                            aria-label="Fechar menu de navegação"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+
                     <div className="hg-brand-container">
                         <img
                             src={logoUrl}
@@ -149,7 +284,13 @@ export function Sidebar() {
                         />
                     </div>
                     <h2 className="hg-sidebar-brand-title">HYDROGUARD</h2>
-                    <Link to="/" className="hg-state-portal-link" title="Voltar ao Mapa de Santa Catarina">
+
+                    <Link
+                        to="/"
+                        className="hg-state-portal-link"
+                        onClick={closeMobileDrawer}
+                        title="Voltar ao Mapa de Santa Catarina"
+                    >
                         <Compass size={14} />
                         <span>Mapa de Santa Catarina</span>
                     </Link>
@@ -169,12 +310,14 @@ export function Sidebar() {
                                     <NavLink
                                         to={item.path}
                                         end={item.end}
+                                        onClick={closeMobileDrawer}
                                         className={({ isActive }) =>
                                             `hg-nav-link ${isActive ? 'active' : ''}`
                                         }
                                     >
                                         <Icon size={20} className="hg-nav-icon" />
                                         <span className="hg-nav-link-label">{item.label}</span>
+
                                         {showAlertBadge && (
                                             <span
                                                 className={`hg-nav-alert-chip ${highestAlertSeverity.toLowerCase()}`}
@@ -204,6 +347,7 @@ export function Sidebar() {
                             className="hg-sidebar-login-btn"
                             onClick={() => {
                                 setLoginError('');
+                                closeMobileDrawer();
                                 setShowLoginModal(true);
                             }}
                         >
@@ -232,6 +376,7 @@ export function Sidebar() {
                                     className="hg-sidebar-action-btn"
                                     onClick={() => {
                                         setPasswordFeedback(null);
+                                        closeMobileDrawer();
                                         setShowPasswordModal(true);
                                     }}
                                     title="Alterar Senha"
@@ -259,6 +404,7 @@ export function Sidebar() {
                 <Activity size={13} />
                 Diagnóstico de Rede
               </span>
+
                             <button
                                 type="button"
                                 className={`hg-status-refresh-btn ${
@@ -302,6 +448,34 @@ export function Sidebar() {
                 </span>
                             </div>
                         </div>
+
+                        {(isCoordinator || systemHealth.simulatedOutage) && (
+                            <button
+                                type="button"
+                                className={`hg-fault-sim-btn ${
+                                    systemHealth.simulatedOutage ? 'is-outage-active' : ''
+                                }`}
+                                onClick={handleToggleOutageSimulation}
+                                disabled={isCheckingHealth || !isCoordinator}
+                                title={
+                                    systemHealth.simulatedOutage
+                                        ? 'Restaurar comunicação normal com a API da ANA'
+                                        : 'Simular queda da API da ANA para testar modo de contingência'
+                                }
+                            >
+                                {systemHealth.simulatedOutage ? (
+                                    <>
+                                        <RotateCcw size={13} />
+                                        <span>Restaurar Conexão ANA</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <WifiOff size={13} />
+                                        <span>Simular Falha da ANA</span>
+                                    </>
+                                )}
+                            </button>
+                        )}
                     </div>
                 </div>
             </aside>
@@ -312,7 +486,9 @@ export function Sidebar() {
                 title={`Acesso Restrito - ${cityDisplayName}`}
             >
                 <form onSubmit={handleLogin} className="hg-form">
-                    {loginError && <div className="hg-alert-banner error">{loginError}</div>}
+                    {loginError && (
+                        <div className="hg-alert-banner error">{loginError}</div>
+                    )}
 
                     <div className="hg-form-group">
                         <label htmlFor="coord-email">E-mail Institucional</label>
@@ -321,7 +497,7 @@ export function Sidebar() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="ex: coordenador@hydroguard.sc"
+                            placeholder="ex: operador.demo@hydroguard.sc"
                             required
                         />
                     </div>

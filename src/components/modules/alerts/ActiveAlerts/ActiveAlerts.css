@@ -168,3 +168,105 @@
     background-color: #15803d;
     transform: translateY(-1px);
 }
+
+/* --- Abas de Ciclo de Vida (Ativos vs Histórico) e Rastreabilidade --- */
+.hg-alerts-top-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.hg-alerts-tabs {
+    display: inline-flex;
+    background-color: var(--color-bg-app);
+    padding: 4px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-strong);
+    gap: 4px;
+}
+
+.hg-alerts-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 0.84rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.hg-alerts-tab-btn:hover {
+    color: var(--color-text-primary);
+}
+
+.hg-alerts-tab-btn.is-active {
+    background-color: var(--color-bg-surface);
+    color: var(--brand-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.hg-alert-card.is-historical-card {
+    opacity: 0.85;
+    background-color: var(--color-bg-app);
+}
+
+.hg-alert-source-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-top: 2px;
+}
+
+.hg-meta-region-highlight {
+    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-border-strong);
+    padding: 3px 9px;
+    border-radius: var(--radius-full);
+    color: var(--color-text-primary);
+}
+
+.hg-alert-share-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-border-default);
+}
+
+.hg-alert-share-btns {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.hg-alert-map-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    background-color: var(--brand-primary-soft);
+    transition: opacity 0.2s ease;
+}
+
+.hg-alert-map-link:hover {
+    opacity: 0.85;
+}

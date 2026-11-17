@@ -1,8 +1,92 @@
 export type RiverStatus = 'CRITICAL' | 'WARNING' | 'NORMAL' | 'BELOW';
 
-export type RiverTrend = 'RISING' | 'FALLING' | 'STABLE';
+export type CityOperationalStatus =
+    | RiverStatus
+    | 'ALERT'
+    | 'UNAVAILABLE'
+    | 'STALE';
 
-export type StationType = 'FLUVIOMETRICA' | 'PLUVIOMETRICA' | string;
+export type WaterTrend = 'RISING' | 'FALLING' | 'STABLE';
+
+export interface RiverThresholds {
+    attention: number;
+    warning: number;
+    emergency: number;
+}
+
+export interface RiverData {
+    id: string;
+    name: string;
+    location: string;
+    currentLevel: number;
+    flowRate: number | null;
+    capacityPercent: number;
+    status: RiverStatus;
+    trend: WaterTrend;
+    trendDeltaCm: number;
+    lastUpdate: string;
+    source: string;
+    isStale: boolean;
+    readingAgeMinutes: number | null;
+}
+
+export interface RiverHistoryPoint {
+    time: string;
+    level: number;
+}
+
+export interface RiverHistoryData {
+    riverId: string;
+    riverName: string;
+    stationName: string;
+    source: string;
+    lastUpdate: string;
+    isStale: boolean;
+    thresholds: RiverThresholds;
+    history: RiverHistoryPoint[];
+}
+
+export interface RainPeriodMeasurement {
+    periodLabel: string;
+    value: number;
+}
+
+export interface RainGaugeData {
+    stationId: string;
+    stationName: string;
+    isRainingNow: boolean;
+    maxScale: number;
+    lastUpdated: string;
+    source: string;
+    isStale: boolean;
+    measurements: RainPeriodMeasurement[];
+}
+
+export interface TelemetryStationMarker {
+    stationCode: string;
+    stationName: string;
+    stationType: 'Fluviometrica' | 'Pluviometrica';
+    riverName: string;
+    coordinates: [number, number];
+    currentLevelMeters: number | null;
+    currentFlowM3s: number | null;
+    accumulatedRain24hMm: number;
+    status: RiverStatus;
+    lastRead: string;
+    source: string;
+    isStale: boolean;
+}
+
+export interface CityStatusSummary {
+    status: CityOperationalStatus;
+    label: string;
+    badgeVariant:
+        | 'normal'
+        | 'watch'
+        | 'warning'
+        | 'critical'
+        | 'neutral';
+}
 
 export interface TelemetryReadingDTO {
     measuredAt: string;
@@ -14,74 +98,17 @@ export interface TelemetryReadingDTO {
 export interface StationTelemetryDTO {
     stationCode: string;
     stationName: string;
-    stationType: StationType;
+    stationType: 'Fluviometrica' | 'Pluviometrica';
     riverName: string;
-    latitude: number;
-    longitude: number;
+    latitude: number | null;
+    longitude: number | null;
     currentLevelMeters: number | null;
     currentFlowM3s: number | null;
-    accumulatedRain24hMm: number;
+    accumulatedRain24hMm: number | null;
     status: string;
     thresholdWarning: number;
     thresholdAlert: number;
     thresholdCritical: number;
     lastMeasuredAt: string | null;
     history: TelemetryReadingDTO[];
-}
-
-export interface RiverData {
-    id: string;
-    name: string;
-    capacityPercentage: number;
-    currentLevel: number;
-    currentFlowM3s: number | null;
-    trend: RiverTrend;
-    levelDeltaCm: number;
-    status: RiverStatus;
-    location: string;
-    lastRead: string;
-}
-
-export interface TelemetryStationMarker {
-    stationCode: string;
-    stationName: string;
-    stationType: StationType;
-    riverName: string;
-    coordinates: [number, number];
-    currentLevelMeters: number | null;
-    currentFlowM3s: number | null;
-    accumulatedRain24hMm: number;
-    status: RiverStatus;
-    lastRead: string;
-}
-
-export interface ChartDataPoint {
-    time: string;
-    level: number;
-}
-
-export interface RiverThresholds {
-    attention: number;
-    warning: number;
-    emergency: number;
-}
-
-export interface RiverHistoryData {
-    riverId: string;
-    riverName: string;
-    thresholds: RiverThresholds;
-    history: ChartDataPoint[];
-}
-
-export interface RainMeasurement {
-    periodLabel: '1 H' | '6 H' | '12 H' | '24 H' | string;
-    value: number;
-}
-
-export interface RainGaugeData {
-    stationName: string;
-    isRainingNow: boolean;
-    lastUpdated: string;
-    maxScale: number;
-    measurements: RainMeasurement[];
 }

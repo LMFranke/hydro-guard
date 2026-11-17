@@ -27,11 +27,12 @@ export function WeatherForecast({ forecastData }: WeatherForecastProps) {
             <header className="hg-section-header">
                 <div>
                     <h2 id="forecast-title" className="hg-section-title">
-                        Previsão e Histórico (10 Dias)
+                        Previsão e Histórico Meteorológico (10 Dias)
                     </h2>
                     <p className="hg-section-subtitle">
                         Monitorização dos 3 dias anteriores e previsão para os próximos 7
-                        dias.
+                        dias • <strong>Fonte externa:</strong> Open-Meteo Forecast API
+                        (Modelos GFS/ECMWF) • <strong>Unidades:</strong> °C e mm.
                     </p>
                 </div>
             </header>

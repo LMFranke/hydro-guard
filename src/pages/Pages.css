@@ -171,3 +171,180 @@
 .hg-rivers-carousel::-webkit-scrollbar-thumb:hover {
     background: #64748b;
 }
+
+/* --- Banner de Destaque de Alerta Ativo no Dashboard --- */
+.hg-dashboard-alert-callout {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 18px 22px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 2rem;
+    border: 1px solid transparent;
+    border-left-width: 6px;
+    box-shadow: var(--shadow-md);
+}
+
+.hg-dashboard-alert-callout.is-critical {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+    border-left-color: #ef4444;
+    color: #7f1d1d;
+}
+
+.hg-dashboard-alert-callout.is-warning {
+    background-color: #fff7ed;
+    border-color: #fed7aa;
+    border-left-color: #f97316;
+    color: #7c2d12;
+}
+
+.hg-dashboard-alert-callout.is-watch {
+    background-color: #fefce8;
+    border-color: #fde047;
+    border-left-color: #eab308;
+    color: #713f12;
+}
+
+.hg-callout-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    flex: 1;
+    min-width: 260px;
+}
+
+.hg-callout-icon {
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.hg-callout-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hg-callout-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.hg-callout-sev-pill {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    background-color: rgba(15, 23, 42, 0.85);
+    color: #ffffff;
+    letter-spacing: 0.5px;
+}
+
+.hg-callout-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.hg-callout-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.hg-callout-desc {
+    font-size: 0.9rem;
+    margin: 0;
+    opacity: 0.92;
+}
+
+.hg-callout-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.hg-callout-btn-primary,
+.hg-callout-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 0.15s ease;
+}
+
+.hg-callout-btn-primary {
+    background-color: #0f172a;
+    color: #ffffff;
+}
+
+.hg-callout-btn-secondary {
+    background-color: rgba(255, 255, 255, 0.75);
+    color: #0f172a;
+    border: 1px solid rgba(15, 23, 42, 0.2);
+}
+
+.hg-callout-btn-primary:hover,
+.hg-callout-btn-secondary:hover {
+    transform: translateY(-1px);
+}
+
+/* --- Proveniência de Dados e Estado de Indisponibilidade Externa (Etapa 3) --- */
+.hg-data-provenance-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+}
+
+.hg-telemetry-unavailable-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 22px 24px;
+    background-color: var(--color-bg-surface);
+    border: 1px solid #cbd5e1;
+    border-left: 5px solid #64748b;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.hg-unavailable-icon {
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+.hg-unavailable-text {
+    flex: 1;
+    min-width: 240px;
+}
+
+.hg-unavailable-text h3 {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--color-text-primary);
+}
+
+.hg-unavailable-text p {
+    margin: 0;
+    font-size: 0.86rem;
+    color: var(--color-text-secondary);
+    line-height: 1.45;
+}
