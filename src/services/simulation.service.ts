@@ -1,3 +1,4 @@
+import { ENV } from '../config/env';
 import type {
     CityHydrologyMesh,
     HydroWaterwaySegment,
@@ -7,7 +8,30 @@ import type {
     StreetFloodSeverity,
     StreetQuotaDiagnostic,
 } from '../types';
-import { readCache, writeCache } from '../utils';
+import { createRiverSpatialGrid, findNearestRiverNode } from '../utils';
+
+interface BackendWaterwayDTO {
+    id: string;
+    name: string;
+    kind: 'river' | 'stream' | 'canal';
+    channelWidthMeters: number;
+    points: [number, number][];
+}
+
+interface BackendStreetWayDTO {
+    id: string;
+    name: string;
+    neighborhood: string | null;
+    highwayType: string;
+    points: [number, number][];
+}
+
+interface BackendSimulationGeometryDTO {
+    citySlug: string;
+    center: [number, number];
+    waterways: BackendWaterwayDTO[];
+    streets: BackendStreetWayDTO[];
+}
 
 interface OverpassElement {
     type: 'way';
@@ -34,23 +58,21 @@ export interface CitySimulationDataset {
 
 const OVERPASS_ENDPOINTS = [
     'https://overpass-api.de/api/interpreter',
-    'https://lz4.overpass-api.de/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
 
-const SIMULATION_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas
+const SIMULATION_BROWSER_CACHE = 'hydroguard-simulation-v2';
+const DATASET_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const TERRARIUM_TILE_URL =
     'https://s3.amazonaws.com/elevation-tiles-prod/terrarium';
+const WATERWAY_HALF_SPAN_KM = 8.5;
+const STREET_HALF_SPAN_KM = 6.5;
 
+const memoryDatasetCache = new Map<string, CitySimulationDataset>();
+const inFlightDatasetRequests = new Map<string, Promise<CitySimulationDataset>>();
 const elevationTileCache = new Map<string, Promise<Float32Array | null>>();
 
-/**
- * Converte o nível selecionado no slider para a elevação hidrostática efetiva (0m a 15m).
- */
-/**
- * Converte o nível selecionado no slider para a elevação hidrostática efetiva (0m a 15m),
- * garantindo que durante a faixa de Normalidade a água fique contida na calha (< 1.1m)
- * e só transborde para as primeiras vias a partir do limiar de Observação/Atenção.
- */
 export function computeEffectiveWaterRiseMeters(
     simulatedLevel: number,
     station: SimulationStationProfile
@@ -77,10 +99,6 @@ export function computeEffectiveWaterRiseMeters(
     return 1.2 + floodProgress * 13.8;
 }
 
-/**
- * Converte a cota topográfica de uma rua (HAND) para o valor correspondente
- * na régua da estação selecionada (em metros).
- */
 export function convertEffectiveRiseToStationQuota(
     effectiveRiseMeters: number,
     station: SimulationStationProfile
@@ -90,38 +108,147 @@ export function convertEffectiveRiseToStationQuota(
         station.thresholds.attention * 0.85
     );
     const floodSpan = Math.max(1, station.maxScaleMeters - bankfullStart);
-
     const normalizedAboveBank = Math.max(0, (effectiveRiseMeters - 1.2) / 13.8);
     const stationQuota = bankfullStart + normalizedAboveBank * floodSpan;
-
     return Number(stationQuota.toFixed(2));
 }
 
-/**
- * Carrega simultaneamente a malha hidrográfica e o catálogo de cotas das ruas do município.
- */
+async function readSimulationBrowserCache(
+    citySlug: string
+): Promise<CitySimulationDataset | null> {
+    if (!('caches' in window)) return null;
+    try {
+        const cache = await window.caches.open(SIMULATION_BROWSER_CACHE);
+        const cacheKey = new Request(`https://hydroguard.local/sim-dataset/${citySlug}`);
+        const response = await cache.match(cacheKey);
+        if (!response) return null;
+
+        const cachedAt = Number(response.headers.get('x-hg-cached-at') ?? '0');
+        if (!cachedAt || Date.now() - cachedAt > DATASET_CACHE_TTL_MS) {
+            return null;
+        }
+
+        const parsed = (await response.json()) as CitySimulationDataset;
+        if (!parsed?.hydroMesh || !Array.isArray(parsed.streets)) return null;
+        return parsed;
+    } catch {
+        return null;
+    }
+}
+
+async function writeSimulationBrowserCache(
+    citySlug: string,
+    dataset: CitySimulationDataset
+): Promise<void> {
+    if (!('caches' in window)) return;
+    try {
+        const cache = await window.caches.open(SIMULATION_BROWSER_CACHE);
+        const cacheKey = new Request(`https://hydroguard.local/sim-dataset/${citySlug}`);
+        const headers = new Headers({
+            'Content-Type': 'application/json',
+            'x-hg-cached-at': String(Date.now()),
+        });
+        await cache.put(
+            cacheKey,
+            new Response(JSON.stringify(dataset), { status: 200, headers })
+        );
+    } catch {
+        return;
+    }
+}
+
 export async function fetchCitySimulationDataset(
     citySlug: string,
     center: [number, number]
 ): Promise<CitySimulationDataset> {
-    const hydroMesh = await fetchCityHydrologyMesh(citySlug, center);
-    const streets = await fetchCityStreetQuotaCatalog(citySlug, center, hydroMesh);
-    return { citySlug, hydroMesh, streets };
+    const memCached = memoryDatasetCache.get(citySlug);
+    if (memCached) return memCached;
+
+    const existingPromise = inFlightDatasetRequests.get(citySlug);
+    if (existingPromise) return existingPromise;
+
+    const loadPromise = (async (): Promise<CitySimulationDataset> => {
+        const browserCached = await readSimulationBrowserCache(citySlug);
+        if (browserCached && browserCached.hydroMesh.segments.length > 0) {
+            memoryDatasetCache.set(citySlug, browserCached);
+            return browserCached;
+        }
+
+        const [geometry, demSampler] = await Promise.all([
+            fetchUnifiedGeometry(citySlug, center),
+            createRegionalElevationSampler(center[0], center[1], 12),
+        ]);
+
+        const hydroMesh: CityHydrologyMesh = {
+            citySlug,
+            center,
+            segments: geometry.waterways,
+        };
+
+        const streets = buildStreetsFromCompactWays(
+            geometry.streets,
+            center,
+            hydroMesh,
+            demSampler
+        );
+
+        const dataset: CitySimulationDataset = { citySlug, hydroMesh, streets };
+
+        if (hydroMesh.segments.length > 0 || streets.length > 0) {
+            memoryDatasetCache.set(citySlug, dataset);
+            void writeSimulationBrowserCache(citySlug, dataset);
+        }
+
+        return dataset;
+    })();
+
+    inFlightDatasetRequests.set(citySlug, loadPromise);
+    try {
+        return await loadPromise;
+    } finally {
+        inFlightDatasetRequests.delete(citySlug);
+    }
 }
 
-export async function fetchCityHydrologyMesh(
+async function fetchUnifiedGeometry(
     citySlug: string,
     center: [number, number]
-): Promise<CityHydrologyMesh> {
-    const cacheKey = `hydro_mesh_v2_${citySlug}`;
-    const cached = readCache<CityHydrologyMesh>(cacheKey);
+): Promise<BackendSimulationGeometryDTO> {
+    const backendUrl = `${ENV.API_BASE_URL.replace(/\/$/, '')}/simulation/${encodeURIComponent(citySlug)}/geometry`;
 
-    if (cached && !cached.isExpired && cached.data.segments.length > 0) {
-        return cached.data;
+    try {
+        const response = await fetch(backendUrl, {
+            headers: { Accept: 'application/json' },
+        });
+        if (response.ok) {
+            const data = (await response.json()) as BackendSimulationGeometryDTO;
+            if (data && Array.isArray(data.waterways) && Array.isArray(data.streets)) {
+                return data;
+            }
+        }
+    } catch {
+        return fetchUnifiedOverpassFallback(citySlug, center);
     }
 
+    return fetchUnifiedOverpassFallback(citySlug, center);
+}
+
+async function fetchUnifiedOverpassFallback(
+    citySlug: string,
+    center: [number, number]
+): Promise<BackendSimulationGeometryDTO> {
     const [lat, lng] = center;
-    const query = `[out:json][timeout:18];(way["waterway"~"^(river|stream|canal)$"](around:7500,${lat},${lng}););out body geom;`;
+    const cosLat = Math.cos((lat * Math.PI) / 180);
+
+    const wLat = WATERWAY_HALF_SPAN_KM / 111.32;
+    const wLng = WATERWAY_HALF_SPAN_KM / (111.32 * cosLat);
+    const sLat = STREET_HALF_SPAN_KM / 111.32;
+    const sLng = STREET_HALF_SPAN_KM / (111.32 * cosLat);
+
+    const wBbox = `${(lat - wLat).toFixed(5)},${(lng - wLng).toFixed(5)},${(lat + wLat).toFixed(5)},${(lng + wLng).toFixed(5)}`;
+    const sBbox = `${(lat - sLat).toFixed(5)},${(lng - sLng).toFixed(5)},${(lat + sLat).toFixed(5)},${(lng + sLng).toFixed(5)}`;
+
+    const query = `[out:json][timeout:25];(way["waterway"~"^(river|stream|canal)$"](${wBbox});way["highway"~"^(trunk|primary|secondary|tertiary|residential)$"]["name"](${sBbox}););out tags geom;`;
 
     for (const endpoint of OVERPASS_ENDPOINTS) {
         try {
@@ -132,74 +259,68 @@ export async function fetchCityHydrologyMesh(
                 },
                 body: `data=${encodeURIComponent(query)}`,
             });
-
             if (!response.ok) continue;
 
             const data = (await response.json()) as OverpassResponse;
-            const segments = parseOverpassWaterways(data.elements ?? []);
-
-            if (segments.length > 0) {
-                const mesh: CityHydrologyMesh = { citySlug, center, segments };
-                writeCache(cacheKey, mesh, SIMULATION_CACHE_TTL_MS);
-                return mesh;
-            }
+            return parseUnifiedOverpassResponse(citySlug, center, data.elements ?? []);
         } catch {
-            // Tenta o próximo mirror oficial da Overpass API
+            continue;
         }
     }
 
-    return cached?.data ?? { citySlug, center, segments: [] };
+    return { citySlug, center, waterways: [], streets: [] };
 }
 
-export async function fetchCityStreetQuotaCatalog(
+function parseUnifiedOverpassResponse(
     citySlug: string,
     center: [number, number],
-    hydroMesh: CityHydrologyMesh
-): Promise<SimulatedStreetSegment[]> {
-    const cacheKey = `street_quotas_v2_${citySlug}`;
-    const cached = readCache<SimulatedStreetSegment[]>(cacheKey);
+    elements: OverpassElement[]
+): BackendSimulationGeometryDTO {
+    const waterways: HydroWaterwaySegment[] = [];
+    const streets: BackendStreetWayDTO[] = [];
 
-    if (cached && !cached.isExpired && cached.data.length > 0) {
-        return cached.data;
-    }
+    for (const el of elements) {
+        if (!el.geometry || el.geometry.length < 2) continue;
 
-    const [lat, lng] = center;
-    const query = `[out:json][timeout:18];(way["highway"~"^(primary|secondary|tertiary|residential|trunk|living_street)$"]["name"](around:4800,${lat},${lng}););out body geom;`;
+        if (el.tags?.waterway) {
+            const rawKind = el.tags.waterway;
+            const kind: HydroWaterwaySegment['kind'] =
+                rawKind === 'river' ? 'river' : rawKind === 'canal' ? 'canal' : 'stream';
+            const points: [number, number][] = [];
+            const step = el.geometry.length > 60 ? 2 : 1;
 
-    for (const endpoint of OVERPASS_ENDPOINTS) {
-        try {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                },
-                body: `data=${encodeURIComponent(query)}`,
-            });
-
-            if (!response.ok) continue;
-
-            const data = (await response.json()) as OverpassResponse;
-            const streets = await buildStreetsFromOverpass(
-                data.elements ?? [],
-                center,
-                hydroMesh
-            );
-
-            if (streets.length > 0) {
-                writeCache(cacheKey, streets, SIMULATION_CACHE_TTL_MS);
-                return streets;
+            for (let i = 0; i < el.geometry.length; i += step) {
+                points.push([el.geometry[i].lat, el.geometry[i].lon]);
             }
-        } catch {
-            // Tenta o próximo mirror oficial da Overpass API
+            const lastPt = el.geometry[el.geometry.length - 1];
+            const lastAdded = points[points.length - 1];
+            if (lastAdded[0] !== lastPt.lat || lastAdded[1] !== lastPt.lon) {
+                points.push([lastPt.lat, lastPt.lon]);
+            }
+
+            waterways.push({
+                id: String(el.id),
+                name:
+                    el.tags.name ??
+                    (kind === 'river' ? 'Rio Principal' : 'Ribeirão / Afluente'),
+                kind,
+                channelWidthMeters: kind === 'river' ? 52 : 14,
+                points,
+            });
+        } else if (el.tags?.highway && el.tags?.name?.trim()) {
+            streets.push({
+                id: String(el.id),
+                name: el.tags.name.trim(),
+                neighborhood: el.tags['addr:suburb'] ?? el.tags.suburb ?? null,
+                highwayType: el.tags.highway,
+                points: el.geometry.map((pt) => [pt.lat, pt.lon]),
+            });
         }
     }
 
-    return cached?.data ?? [];
+    return { citySlug, center, waterways, streets };
 }
 
-/**
- * Avalia quais ruas estão alagadas no nível atual do slider e calcula a lâmina d'água.
- */
 export function evaluateImpactedStreets(
     streets: SimulatedStreetSegment[],
     station: SimulationStationProfile,
@@ -228,7 +349,6 @@ export function evaluateImpactedStreets(
             street.baseEffectiveQuotaMeters,
             station
         );
-
         const severity: StreetFloodSeverity =
             depth >= 1.0 ? 'CRITICAL' : depth >= 0.35 ? 'WARNING' : 'WATCH';
 
@@ -243,10 +363,6 @@ export function evaluateImpactedStreets(
     return impacted.sort((a, b) => b.waterDepthMeters - a.waterDepthMeters);
 }
 
-/**
- * Gera o diagnóstico completo de uma via específica para o nível atual do simulador,
- * informando se está segura (e qual a margem em metros) ou alagada (e qual a lâmina).
- */
 export function inspectStreetAtQuota(
     street: SimulatedStreetSegment,
     station: SimulationStationProfile,
@@ -300,10 +416,6 @@ export function inspectStreetAtQuota(
     };
 }
 
-/**
- * Pesquisa ruas no catálogo topográfico do município por nome ou bairro
- * e retorna os resultados já enriquecidos com o diagnóstico na cota atual.
- */
 export function searchCityStreetsCatalog(
     streets: SimulatedStreetSegment[],
     query: string,
@@ -330,7 +442,6 @@ export function searchCityStreetsCatalog(
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
             .toUpperCase();
-
         return (
             normName.includes(normalizedQuery) || normSuburb.includes(normalizedQuery)
         );
@@ -341,41 +452,25 @@ export function searchCityStreetsCatalog(
         .map((street) => inspectStreetAtQuota(street, station, simulatedLevel));
 }
 
-async function buildStreetsFromOverpass(
-    elements: OverpassElement[],
+function buildStreetsFromCompactWays(
+    rawStreets: BackendStreetWayDTO[],
     center: [number, number],
-    hydroMesh: CityHydrologyMesh
-): Promise<SimulatedStreetSegment[]> {
-    const cosLat = Math.cos((center[0] * Math.PI) / 180);
-
-    // Achata pontos dos rios para busca rápida de proximidade
-    const riverNodes: Array<{
-        lat: number;
-        lng: number;
-        isMain: boolean;
-        width: number;
-    }> = [];
-
-    for (const seg of hydroMesh.segments) {
-        const isMain = seg.kind === 'river';
-        for (const [rLat, rLng] of seg.points) {
-            riverNodes.push({
-                lat: rLat,
-                lng: rLng,
-                isMain,
-                width: seg.channelWidthMeters,
-            });
-        }
-    }
-
-    // Pré-carrega o bloco de elevação (zoom 13) que cobre o centro urbano para calibrar as cotas reais
-    const demSampler = await createCenterElevationSampler(center[0], center[1], 13);
+    hydroMesh: CityHydrologyMesh,
+    demSampler: ((ptLat: number, ptLng: number) => number | null) | null
+): SimulatedStreetSegment[] {
+    const spatialGrid = createRiverSpatialGrid(hydroMesh.segments, center[0]);
+    if (spatialGrid.nodes.length === 0) return [];
 
     let minRiverBedElevation = Infinity;
     if (demSampler) {
-        for (const rn of riverNodes) {
+        for (let i = 0; i < spatialGrid.nodes.length; i++) {
+            const rn = spatialGrid.nodes[i];
             const z = demSampler(rn.lat, rn.lng);
-            if (z !== null && z < minRiverChannelCeiling(rn.isMain) && z < minRiverBedElevation) {
+            if (
+                z !== null &&
+                z < minRiverChannelCeiling(rn.isMain) &&
+                z < minRiverBedElevation
+            ) {
                 minRiverBedElevation = z;
             }
         }
@@ -395,38 +490,46 @@ async function buildStreetsFromOverpass(
         }
     >();
 
-    for (const el of elements) {
-        const rawName = el.tags?.name?.trim();
-        if (!rawName || !el.geometry || el.geometry.length < 2) continue;
+    for (let s = 0; s < rawStreets.length; s++) {
+        const el = rawStreets[s];
+        const rawName = el.name?.trim();
+        if (!rawName || !el.points || el.points.length < 2) continue;
 
-        const poly: [number, number][] = el.geometry.map((pt) => [pt.lat, pt.lon]);
-
-        // Encontra o vértice da rua mais próximo da rede hidrográfica
-        let segmentMinDist = Infinity;
+        const poly = el.points;
+        let bestDistSq = Infinity;
         let closestVertex: [number, number] = poly[0];
         let nearestRiverWidth = 30;
         let nearestIsMain = true;
+        let foundMatch = false;
 
-        for (const [vLat, vLng] of poly) {
-            for (let i = 0; i < riverNodes.length; i++) {
-                const rn = riverNodes[i];
-                const dy = (vLat - rn.lat) * 111320;
-                const dx = (vLng - rn.lng) * 111320 * cosLat;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+        const step = poly.length > 12 ? 2 : 1;
+        for (let v = 0; v < poly.length; v += step) {
+            const vertex = poly[v];
+            const currentSearchRadius = foundMatch
+                ? Math.min(1950, Math.sqrt(bestDistSq))
+                : 1950;
+            const match = findNearestRiverNode(
+                spatialGrid,
+                vertex[0],
+                vertex[1],
+                currentSearchRadius
+            );
 
-                if (dist < segmentMinDist) {
-                    segmentMinDist = dist;
-                    closestVertex = [vLat, vLng];
-                    nearestRiverWidth = rn.width;
-                    nearestIsMain = rn.isMain;
-                }
+            if (match && match.distSq < bestDistSq) {
+                bestDistSq = match.distSq;
+                closestVertex = vertex;
+                nearestRiverWidth = match.node.width;
+                nearestIsMain = match.node.isMain;
+                foundMatch = true;
             }
         }
 
+        if (!foundMatch) continue;
+
+        const segmentMinDist = Math.sqrt(bestDistSq);
         const maxReach = nearestIsMain ? 1900 : 650;
         if (segmentMinDist > maxReach) continue;
 
-        // Calcula a cota necessária usando a mesma equação HAND da camada de inundação
         let handQuota = 2.2;
         if (demSampler && Number.isFinite(minRiverBedElevation)) {
             const streetZ = demSampler(closestVertex[0], closestVertex[1]);
@@ -440,9 +543,7 @@ async function buildStreetsFromOverpass(
                 handQuota = Math.max(1.2, correctedHand + distPenalty);
             }
         } else {
-            handQuota =
-                1.4 +
-                (segmentMinDist / (nearestIsMain ? 145 : 75)) * 1.1;
+            handQuota = 1.4 + (segmentMinDist / (nearestIsMain ? 145 : 75)) * 1.1;
         }
 
         const effectiveQuota = Number(Math.min(14.8, handQuota).toFixed(2));
@@ -451,7 +552,7 @@ async function buildStreetsFromOverpass(
             .replace(/[\u0300-\u036f]/g, '')
             .toUpperCase();
 
-        const suburb = el.tags?.['addr:suburb'] ?? el.tags?.suburb ?? null;
+        const suburb = el.neighborhood;
         const existing = groupedByStreetName.get(normKey);
 
         if (!existing) {
@@ -459,7 +560,7 @@ async function buildStreetsFromOverpass(
                 id: `way-${el.id}`,
                 name: rawName,
                 neighborhood: suburb,
-                highwayType: el.tags?.highway ?? 'residential',
+                highwayType: el.highwayType ?? 'residential',
                 focusPoint: closestVertex,
                 polylines: [poly],
                 minDistanceMeters: Math.round(segmentMinDist),
@@ -482,7 +583,7 @@ async function buildStreetsFromOverpass(
 
     return Array.from(groupedByStreetName.values())
         .sort((a, b) => a.minEffectiveQuota - b.minEffectiveQuota)
-        .slice(0, 120)
+        .slice(0, 300)
         .map((item) => ({
             id: item.id,
             name: item.name,
@@ -499,79 +600,61 @@ function minRiverChannelCeiling(isMain: boolean): number {
     return isMain ? 900 : 1200;
 }
 
-async function createCenterElevationSampler(
+async function createRegionalElevationSampler(
     lat: number,
     lng: number,
     z: number
 ): Promise<((ptLat: number, ptLng: number) => number | null) | null> {
     const n = Math.pow(2, z);
     const latRad = (lat * Math.PI) / 180;
-    const centerTileX = Math.floor(((lng + 180) / 360) * n);
-    const centerTileY = Math.floor(
-        ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n
+    const exactCenterX = ((lng + 180) / 360) * n;
+    const exactCenterY =
+        ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n;
+
+    const baseTileX = Math.floor(exactCenterX);
+    const baseTileY = Math.floor(exactCenterY);
+    const offsetX = exactCenterX - baseTileX >= 0.5 ? 1 : -1;
+    const offsetY = exactCenterY - baseTileY >= 0.5 ? 1 : -1;
+
+    const tileCoords: Array<[number, number]> = [
+        [baseTileX, baseTileY],
+        [baseTileX + offsetX, baseTileY],
+        [baseTileX, baseTileY + offsetY],
+        [baseTileX + offsetX, baseTileY + offsetY],
+    ];
+
+    const tiles = await Promise.all(
+        tileCoords.map(async ([tx, ty]) => ({
+            key: `${tx}:${ty}`,
+            data: await fetchDecodedElevationTile(z, tx, ty),
+        }))
     );
 
-    const elevations = await fetchDecodedElevationTile(z, centerTileX, centerTileY);
-    if (!elevations) return null;
+    const tileMap = new Map<string, Float32Array>();
+    for (const tile of tiles) {
+        if (tile.data) {
+            tileMap.set(tile.key, tile.data);
+        }
+    }
+
+    if (tileMap.size === 0) return null;
 
     return (ptLat: number, ptLng: number): number | null => {
         const pLatRad = (ptLat * Math.PI) / 180;
         const exactX = ((ptLng + 180) / 360) * n;
         const exactY =
-            ((1 - Math.log(Math.tan(pLatRad) + 1 / Math.cos(pLatRad)) / Math.PI) /
-                2) *
+            ((1 - Math.log(Math.tan(pLatRad) + 1 / Math.cos(pLatRad)) / Math.PI) / 2) *
             n;
 
-        if (
-            Math.floor(exactX) !== centerTileX ||
-            Math.floor(exactY) !== centerTileY
-        ) {
-            return null;
-        }
+        const tx = Math.floor(exactX);
+        const ty = Math.floor(exactY);
+        const elevations = tileMap.get(`${tx}:${ty}`);
+        if (!elevations) return null;
 
-        const col = Math.min(255, Math.max(0, Math.floor((exactX - centerTileX) * 256)));
-        const row = Math.min(255, Math.max(0, Math.floor((exactY - centerTileY) * 256)));
+        const col = Math.min(255, Math.max(0, Math.floor((exactX - tx) * 256)));
+        const row = Math.min(255, Math.max(0, Math.floor((exactY - ty) * 256)));
         return elevations[row * 256 + col];
     };
-}
-
-function parseOverpassWaterways(
-    elements: OverpassElement[]
-): HydroWaterwaySegment[] {
-    const segments: HydroWaterwaySegment[] = [];
-
-    for (const el of elements) {
-        if (!el.geometry || el.geometry.length < 2) continue;
-
-        const rawKind = el.tags?.waterway ?? 'stream';
-        const kind: HydroWaterwaySegment['kind'] =
-            rawKind === 'river' ? 'river' : rawKind === 'canal' ? 'canal' : 'stream';
-
-        const points: [number, number][] = [];
-        const step = el.geometry.length > 80 ? 2 : 1;
-
-        for (let i = 0; i < el.geometry.length; i += step) {
-            points.push([el.geometry[i].lat, el.geometry[i].lon]);
-        }
-
-        const lastPt = el.geometry[el.geometry.length - 1];
-        const lastAdded = points[points.length - 1];
-        if (lastAdded[0] !== lastPt.lat || lastAdded[1] !== lastPt.lon) {
-            points.push([lastPt.lat, lastPt.lon]);
-        }
-
-        segments.push({
-            id: String(el.id),
-            name:
-                el.tags?.name ??
-                (kind === 'river' ? 'Rio Principal' : 'Ribeirão / Afluente'),
-            kind,
-            channelWidthMeters: kind === 'river' ? 52 : 14,
-            points,
-        });
-    }
-
-    return segments;
 }
 
 export function fetchDecodedElevationTile(
@@ -586,7 +669,6 @@ export function fetchDecodedElevationTile(
     const promise = new Promise<Float32Array | null>((resolve) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
-
         img.onload = () => {
             try {
                 const canvas = document.createElement('canvas');
@@ -597,11 +679,9 @@ export function fetchDecodedElevationTile(
                     resolve(null);
                     return;
                 }
-
                 ctx.drawImage(img, 0, 0, 256, 256);
                 const { data } = ctx.getImageData(0, 0, 256, 256);
                 const elevations = new Float32Array(256 * 256);
-
                 for (let i = 0; i < 65536; i++) {
                     const idx = i * 4;
                     const r = data[idx];
@@ -609,13 +689,11 @@ export function fetchDecodedElevationTile(
                     const b = data[idx + 2];
                     elevations[i] = r * 256 + g + b / 256 - 32768;
                 }
-
                 resolve(elevations);
             } catch {
                 resolve(null);
             }
         };
-
         img.onerror = () => resolve(null);
         img.src = `${TERRARIUM_TILE_URL}/${z}/${x}/${y}.png`;
     });

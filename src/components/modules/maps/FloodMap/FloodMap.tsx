@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import { MapPin, Maximize2, Minimize2, Plus } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
@@ -33,12 +33,11 @@ import { MapLegend } from './components/MapLegend';
 import { RiskZoneModal } from './components/RiskZoneModal';
 import { SimulationControlBar } from './components/SimulationControlBar';
 import { StreetQuotaSearch } from './components/StreetQuotaSearch';
+import { ActiveAlertsMapLayer } from './layers/ActiveAlertsMapLayer';
 import { FloodSimulationLayer } from './layers/FloodSimulationLayer';
 import { FloodZonesLayer } from './layers/FloodZonesLayer';
 import { LandslideZonesLayer } from './layers/LandslideZonesLayer';
 import { TelemetryStationsLayer } from './layers/TelemetryStationsLayer';
-import { ActiveAlertsMapLayer } from './layers/ActiveAlertsMapLayer';
-
 import './FloodMap.css';
 
 export function FloodMap() {
@@ -54,6 +53,8 @@ export function FloodMap() {
         editRiskZone,
         removeRiskZone,
     } = useMonitoring();
+
+    const [cityLat, cityLng] = coordinates;
 
     const simulationStations = useMemo(
         () =>
@@ -143,6 +144,8 @@ export function FloodMap() {
     const [simulatedLevel, setSimulatedLevel] = useState<number>(
         () => selectedStation.currentLevel
     );
+    const deferredSimulatedLevel = useDeferredValue(simulatedLevel);
+
     const [simulationDataset, setSimulationDataset] =
         useState<CitySimulationDataset | null>(null);
     const [selectedStreetId, setSelectedStreetId] = useState<string | null>(null);
@@ -153,7 +156,6 @@ export function FloodMap() {
     const [showStations, setShowStations] = useState<boolean>(true);
     const [isMaximized, setIsMaximized] = useState<boolean>(false);
     const [isPickingLocation, setIsPickingLocation] = useState<boolean>(false);
-
     const [showModal, setShowModal] = useState<boolean>(false);
     const [editingZone, setEditingZone] = useState<RiskZone | null>(null);
     const [pickedCoords, setPickedCoords] = useState<[number, number] | null>(
@@ -173,23 +175,45 @@ export function FloodMap() {
     }, [activeMode, selectedStation.coordinates, coordinates]);
 
     useEffect(() => {
-        if (activeMode !== 'SIMULATION') return;
         if (simulationDataset?.citySlug === citySlug) return;
 
         let isMounted = true;
+        let idleId: number | null = null;
+        let timeoutId: number | null = null;
 
-        async function loadSimulationData() {
-            const dataset = await fetchCitySimulationDataset(citySlug, coordinates);
+        const loadSimulationData = async () => {
+            const dataset = await fetchCitySimulationDataset(citySlug, [
+                cityLat,
+                cityLng,
+            ]);
             if (!isMounted) return;
             setSimulationDataset(dataset);
-        }
+        };
 
-        void loadSimulationData();
+        if (activeMode === 'SIMULATION') {
+            void loadSimulationData();
+        } else {
+            const startPrefetch = () => {
+                void loadSimulationData();
+            };
+
+            if (typeof window.requestIdleCallback === 'function') {
+                idleId = window.requestIdleCallback(startPrefetch, { timeout: 2500 });
+            } else {
+                timeoutId = window.setTimeout(startPrefetch, 1200);
+            }
+        }
 
         return () => {
             isMounted = false;
+            if (idleId !== null && typeof window.cancelIdleCallback === 'function') {
+                window.cancelIdleCallback(idleId);
+            }
+            if (timeoutId !== null) {
+                window.clearTimeout(timeoutId);
+            }
         };
-    }, [activeMode, citySlug, coordinates, simulationDataset?.citySlug]);
+    }, [activeMode, citySlug, cityLat, cityLng, simulationDataset?.citySlug]);
 
     const currentCityStreets = useMemo(
         () =>
@@ -213,17 +237,22 @@ export function FloodMap() {
             evaluateImpactedStreets(
                 currentCityStreets,
                 selectedStation,
-                simulatedLevel
+                deferredSimulatedLevel
             ),
-        [currentCityStreets, selectedStation, simulatedLevel]
+        [currentCityStreets, selectedStation, deferredSimulatedLevel]
     );
 
     const inspectedDiagnostic = useMemo(() => {
         if (!selectedStreetId) return null;
         const found = currentCityStreets.find((s) => s.id === selectedStreetId);
         if (!found) return null;
-        return inspectStreetAtQuota(found, selectedStation, simulatedLevel);
-    }, [selectedStreetId, currentCityStreets, selectedStation, simulatedLevel]);
+        return inspectStreetAtQuota(found, selectedStation, deferredSimulatedLevel);
+    }, [
+        selectedStreetId,
+        currentCityStreets,
+        selectedStation,
+        deferredSimulatedLevel,
+    ]);
 
     useEffect(() => {
         if (!isMaximized) return;
@@ -272,7 +301,9 @@ export function FloodMap() {
         setSelectedStationId(newStationId);
         setSelectedStreetId(null);
         setFocusedStreetCoords(null);
-        const target = simulationStations.find((s) => s.stationId === newStationId);
+        const target = effectiveSimulationStations.find(
+            (s) => s.stationId === newStationId
+        );
         if (target) {
             setSimulatedLevel(target.currentLevel);
         }
@@ -393,7 +424,7 @@ export function FloodMap() {
                                 cityName={tenant?.name ?? cityDisplayName}
                                 streets={currentCityStreets}
                                 selectedStation={selectedStation}
-                                simulatedLevel={simulatedLevel}
+                                simulatedLevel={deferredSimulatedLevel}
                                 inspectedDiagnostic={inspectedDiagnostic}
                                 onSelectStreet={handleFocusStreet}
                                 onClearSelection={handleClearStreetSelection}
@@ -403,7 +434,7 @@ export function FloodMap() {
                             <ImpactedStreetsPanel
                                 impactedStreets={impactedStreets}
                                 totalCatalogCount={currentCityStreets.length}
-                                simulatedLevel={simulatedLevel}
+                                simulatedLevel={deferredSimulatedLevel}
                                 selectedStreetId={selectedStreetId}
                                 isLoading={isLoadingSimulationData}
                                 onSelectStreet={handleFocusStreet}
@@ -416,6 +447,7 @@ export function FloodMap() {
                     center={activeMapCenter}
                     zoom={14}
                     scrollWheelZoom={true}
+                    preferCanvas={true}
                     className="hg-leaflet-container"
                 >
                     <MapViewportSync center={activeMapCenter} isMaximized={isMaximized} />
@@ -456,6 +488,7 @@ export function FloodMap() {
                                 url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
                                 opacity={0.75}
                             />
+
                             <FloodSimulationLayer
                                 hydroMesh={currentHydroMesh}
                                 isLoadingData={isLoadingSimulationData}
@@ -472,6 +505,7 @@ export function FloodMap() {
                     {showStations && (
                         <TelemetryStationsLayer stations={stationMarkers} />
                     )}
+
                     <ActiveAlertsMapLayer alerts={alerts} cityCenter={coordinates} />
                 </MapContainer>
 

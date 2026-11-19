@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import {
     AlertTriangle,
     CheckCircle2,
@@ -30,14 +30,14 @@ const SEVERITY_META: Record<
     WATCH: { label: 'Lâmina Rasa', cssClass: 'watch' },
 };
 
-export function ImpactedStreetsPanel({
-                                         impactedStreets,
-                                         totalCatalogCount,
-                                         simulatedLevel,
-                                         selectedStreetId,
-                                         isLoading,
-                                         onSelectStreet,
-                                     }: ImpactedStreetsPanelProps) {
+export const ImpactedStreetsPanel = memo(function ImpactedStreetsPanel({
+                                                                           impactedStreets,
+                                                                           totalCatalogCount,
+                                                                           simulatedLevel,
+                                                                           selectedStreetId,
+                                                                           isLoading,
+                                                                           onSelectStreet,
+                                                                       }: ImpactedStreetsPanelProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
 
     const criticalCount = impactedStreets.filter(
@@ -83,7 +83,6 @@ export function ImpactedStreetsPanel({
           >
             {impactedStreets.length} / {totalCatalogCount || '...'}
           </span>
-
                     <button
                         type="button"
                         className="hg-sim-collapse-btn"
@@ -165,10 +164,11 @@ export function ImpactedStreetsPanel({
                         <span
                             className={`hg-sim-depth-badge ${sevMeta.cssClass}`}
                         >
-                          +{waterDepthMeters.toLocaleString('pt-BR', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                        })}
+                          +
+                            {waterDepthMeters.toLocaleString('pt-BR', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                            })}
                             m
                         </span>
                                                 <span className="hg-sim-focus-hint">
@@ -185,4 +185,4 @@ export function ImpactedStreetsPanel({
             )}
         </aside>
     );
-}
+});

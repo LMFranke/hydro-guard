@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { CircleMarker, Polyline, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -25,7 +25,7 @@ interface FloodSimulationLayerProps {
     onSelectStreet: (streetId: string, coords: [number, number]) => void;
 }
 
-const GRID_RES = 128;
+const GRID_RES = 64;
 const DEM_MAX_NATIVE_ZOOM = 14;
 
 const STREET_SEVERITY_COLOR: Record<StreetFloodSeverity, string> = {
@@ -36,6 +36,13 @@ const STREET_SEVERITY_COLOR: Record<StreetFloodSeverity, string> = {
 
 interface PreparedTileData {
     canvas: HTMLCanvasElement;
+    requiredLevelGrid: Float32Array;
+}
+
+interface WorkerTileResponse {
+    type: 'TILE_RESULT';
+    requestId: number;
+    meshVersion: number;
     requiredLevelGrid: Float32Array;
 }
 
@@ -52,49 +59,141 @@ function tileXYToLatLng(
 
 class TopographicFloodGridLayer extends L.GridLayer {
     private preparedTiles = new Map<string, PreparedTileData>();
+    private activeTileKeys = new Set<string>();
+    private pendingRequests = new Map<number, (grid: Float32Array | null) => void>();
+    private worker: Worker | null = null;
     private mesh: CityHydrologyMesh | null = null;
+    private meshVersion = 0;
+    private nextRequestId = 1;
     private effectiveWaterMeters = 2.5;
+    private paintRafId: number | null = null;
+
+    private offscreenCanvas: HTMLCanvasElement;
+    private offscreenCtx: CanvasRenderingContext2D | null;
+    private offscreenImageData: ImageData | null;
+
+    private readonly handleTileUnload = (e: L.TileEvent) => {
+        const unloadedKey = this.tileCoordsToKey(e.coords);
+        this.activeTileKeys.delete(unloadedKey);
+        this.preparedTiles.delete(unloadedKey);
+    };
+
+    constructor(options?: L.GridLayerOptions) {
+        super(options);
+        this.offscreenCanvas = document.createElement('canvas');
+        this.offscreenCanvas.width = GRID_RES;
+        this.offscreenCanvas.height = GRID_RES;
+        this.offscreenCtx = this.offscreenCanvas.getContext('2d');
+        this.offscreenImageData = this.offscreenCtx
+            ? this.offscreenCtx.createImageData(GRID_RES, GRID_RES)
+            : null;
+    }
+
+    public override onAdd(map: L.Map): this {
+        this.ensureWorker();
+        this.on('tileunload', this.handleTileUnload);
+        return super.onAdd(map);
+    }
+
+    public override onRemove(map: L.Map): this {
+        this.off('tileunload', this.handleTileUnload);
+        if (this.paintRafId !== null) {
+            window.cancelAnimationFrame(this.paintRafId);
+            this.paintRafId = null;
+        }
+        this.activeTileKeys.clear();
+        this.preparedTiles.clear();
+        for (const resolve of this.pendingRequests.values()) {
+            resolve(null);
+        }
+        this.pendingRequests.clear();
+        if (this.worker) {
+            this.worker.terminate();
+            this.worker = null;
+        }
+        return super.onRemove(map);
+    }
 
     public setHydrologyMesh(mesh: CityHydrologyMesh | null) {
         this.mesh = mesh;
+        this.meshVersion += 1;
         this.preparedTiles.clear();
+        this.ensureWorker();
+        this.worker?.postMessage({
+            type: 'INIT_MESH',
+            meshVersion: this.meshVersion,
+            mesh,
+        });
         this.redraw();
     }
 
     public setEffectiveWaterMeters(waterMeters: number) {
         this.effectiveWaterMeters = waterMeters;
-        for (const tileData of this.preparedTiles.values()) {
-            this.paintTileCanvas(tileData);
-        }
+        if (this.paintRafId !== null) return;
+
+        this.paintRafId = window.requestAnimationFrame(() => {
+            this.paintRafId = null;
+            for (const tileData of this.preparedTiles.values()) {
+                this.paintTileCanvas(tileData);
+            }
+        });
     }
 
-    protected createTile(coords: L.Coords, done: L.DoneCallback): HTMLElement {
+    protected override createTile(
+        coords: L.Coords,
+        done: L.DoneCallback
+    ): HTMLElement {
         const canvas = document.createElement('canvas');
         canvas.width = 256;
         canvas.height = 256;
         canvas.className = 'hg-sim-canvas-tile';
 
         const tileKey = this.tileCoordsToKey(coords);
+        const requestMeshVersion = this.meshVersion;
+        this.activeTileKeys.add(tileKey);
 
-        void this.buildTileElevationModel(coords, canvas).then((prepared) => {
-            if (prepared) {
-                this.preparedTiles.set(tileKey, prepared);
-                this.paintTileCanvas(prepared);
+        void this.buildTileElevationModel(coords, canvas, requestMeshVersion).then(
+            (prepared) => {
+                if (
+                    prepared &&
+                    requestMeshVersion === this.meshVersion &&
+                    this.activeTileKeys.has(tileKey)
+                ) {
+                    this.preparedTiles.set(tileKey, prepared);
+                    this.paintTileCanvas(prepared);
+                }
+                done(undefined, canvas);
             }
-            done(undefined, canvas);
-        });
-
-        this.on('tileunload', (e: L.TileEvent) => {
-            const unloadedKey = this.tileCoordsToKey(e.coords);
-            this.preparedTiles.delete(unloadedKey);
-        });
+        );
 
         return canvas;
     }
 
+    private ensureWorker() {
+        if (this.worker) return;
+        this.worker = new Worker(
+            new URL(
+                '../../../../../workers/floodSimulation.worker.ts',
+                import.meta.url
+            ),
+            { type: 'module' }
+        );
+        this.worker.onmessage = (event: MessageEvent<WorkerTileResponse>) => {
+            const msg = event.data;
+            if (msg.type !== 'TILE_RESULT') return;
+            const resolver = this.pendingRequests.get(msg.requestId);
+            if (!resolver) return;
+            this.pendingRequests.delete(msg.requestId);
+            resolver(
+                msg.meshVersion === this.meshVersion ? msg.requiredLevelGrid : null
+            );
+        };
+    }
+
     private async buildTileElevationModel(
         coords: L.Coords,
-        canvas: HTMLCanvasElement
+        canvas: HTMLCanvasElement,
+        requestMeshVersion: number
     ): Promise<PreparedTileData | null> {
         if (!this.mesh || this.mesh.segments.length === 0) {
             return null;
@@ -107,183 +206,95 @@ class TopographicFloodGridLayer extends L.GridLayer {
         const demY = Math.floor(coords.y / scale);
 
         const demElevations = await fetchDecodedElevationTile(demZ, demX, demY);
-        if (!demElevations) return null;
+        if (!demElevations || requestMeshVersion !== this.meshVersion || !this.worker) {
+            return null;
+        }
 
         const subOffsetX = (coords.x % scale) * (256 / scale);
         const subOffsetY = (coords.y % scale) * (256 / scale);
         const subSize = 256 / scale;
-
-        const [centerLat, centerLng] = tileXYToLatLng(
-            coords.x + 0.5,
-            coords.y + 0.5,
-            coords.z
-        );
-        const cosLat = Math.cos((centerLat * Math.PI) / 180);
-
-        const localPoints: Array<{
-            lat: number;
-            lng: number;
-            isMainRiver: boolean;
-            channelWidth: number;
-        }> = [];
-
-        for (const seg of this.mesh.segments) {
-            const isMain = seg.kind === 'river';
-            for (const [ptLat, ptLng] of seg.points) {
-                if (
-                    Math.abs(ptLat - centerLat) < 0.045 &&
-                    Math.abs(ptLng - centerLng) < 0.055
-                ) {
-                    localPoints.push({
-                        lat: ptLat,
-                        lng: ptLng,
-                        isMainRiver: isMain,
-                        channelWidth: seg.channelWidthMeters,
-                    });
-                }
-            }
-        }
-
-        const requiredLevelGrid = new Float32Array(GRID_RES * GRID_RES);
-        requiredLevelGrid.fill(999);
-
-        if (localPoints.length === 0) {
-            return { canvas, requiredLevelGrid };
-        }
-
         const terrainGrid = new Float32Array(GRID_RES * GRID_RES);
-        let minRiverChannelElevation = Infinity;
 
         for (let r = 0; r < GRID_RES; r++) {
             const demRow = Math.min(
                 255,
                 Math.floor(subOffsetY + ((r + 0.5) / GRID_RES) * subSize)
             );
+            const demRowOffset = demRow * 256;
+            const gridRowOffset = r * GRID_RES;
+
             for (let c = 0; c < GRID_RES; c++) {
                 const demCol = Math.min(
                     255,
                     Math.floor(subOffsetX + ((c + 0.5) / GRID_RES) * subSize)
                 );
-                terrainGrid[r * GRID_RES + c] = demElevations[demRow * 256 + demCol];
+                terrainGrid[gridRowOffset + c] = demElevations[demRowOffset + demCol];
             }
         }
 
-        const distGrid = new Float32Array(GRID_RES * GRID_RES);
-        const channelWidthGrid = new Float32Array(GRID_RES * GRID_RES);
-        const isMainRiverGrid = new Uint8Array(GRID_RES * GRID_RES);
+        const [northLat, westLng] = tileXYToLatLng(coords.x, coords.y, coords.z);
+        const [southLat, eastLng] = tileXYToLatLng(
+            coords.x + 1,
+            coords.y + 1,
+            coords.z
+        );
 
-        for (let r = 0; r < GRID_RES; r++) {
-            const fracY = coords.y + (r + 0.5) / GRID_RES;
-            const n = Math.PI - (2 * Math.PI * fracY) / Math.pow(2, coords.z);
-            const lat =
-                (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
-
-            for (let c = 0; c < GRID_RES; c++) {
-                const fracX = coords.x + (c + 0.5) / GRID_RES;
-                const lng = (fracX / Math.pow(2, coords.z)) * 360 - 180;
-
-                let minDistSq = Infinity;
-                let nearestWidth = 20;
-                let nearestMain = 0;
-
-                for (let i = 0; i < localPoints.length; i++) {
-                    const lp = localPoints[i];
-                    const dy = (lat - lp.lat) * 111320;
-                    const dx = (lng - lp.lng) * 111320 * cosLat;
-                    const dSq = dx * dx + dy * dy;
-                    if (dSq < minDistSq) {
-                        minDistSq = dSq;
-                        nearestWidth = lp.channelWidth;
-                        nearestMain = lp.isMainRiver ? 1 : 0;
-                    }
+        const requestId = this.nextRequestId++;
+        const requiredLevelGrid = await new Promise<Float32Array | null>(
+            (resolve) => {
+                if (!this.worker) {
+                    resolve(null);
+                    return;
                 }
-
-                const idx = r * GRID_RES + c;
-                const distMeters = Math.sqrt(minDistSq);
-                distGrid[idx] = distMeters;
-                channelWidthGrid[idx] = nearestWidth;
-                isMainRiverGrid[idx] = nearestMain;
-
-                if (distMeters <= nearestWidth * 1.5) {
-                    const z = terrainGrid[idx];
-                    if (z < minRiverChannelElevation) {
-                        minRiverChannelElevation = z;
-                    }
-                }
+                this.pendingRequests.set(requestId, resolve);
+                this.worker.postMessage(
+                    {
+                        type: 'COMPUTE_TILE',
+                        requestId,
+                        meshVersion: requestMeshVersion,
+                        northLat,
+                        southLat,
+                        westLng,
+                        eastLng,
+                        gridRes: GRID_RES,
+                        terrainGrid,
+                    },
+                    [terrainGrid.buffer]
+                );
             }
-        }
+        );
 
-        if (!Number.isFinite(minRiverChannelElevation)) {
-            for (let i = 0; i < terrainGrid.length; i++) {
-                if (terrainGrid[i] < minRiverChannelElevation) {
-                    minRiverChannelElevation = terrainGrid[i];
-                }
-            }
-        }
-
-        for (let i = 0; i < GRID_RES * GRID_RES; i++) {
-            const dist = distGrid[i];
-            const channelW = channelWidthGrid[i];
-            const isMain = isMainRiverGrid[i] === 1;
-            const maxFloodplainReach = isMain ? 2200 : 750;
-
-            if (dist > maxFloodplainReach) {
-                requiredLevelGrid[i] = 999;
-                continue;
-            }
-
-            if (dist <= channelW * 0.65) {
-                requiredLevelGrid[i] = 0.2;
-                continue;
-            }
-
-            const rawHand = Math.max(0, terrainGrid[i] - minRiverChannelElevation);
-            const correctedHand = Math.max(0, rawHand - 1.8) * 0.62;
-            const distancePenalty =
-                ((dist - channelW * 0.65) / (isMain ? 180 : 85)) * 1.15;
-
-            requiredLevelGrid[i] = Math.max(0.5, correctedHand + distancePenalty);
-        }
-
+        if (!requiredLevelGrid) return null;
         return { canvas, requiredLevelGrid };
     }
 
     private paintTileCanvas(tileData: PreparedTileData) {
         const { canvas, requiredLevelGrid } = tileData;
         const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+        if (!ctx || !this.offscreenCtx || !this.offscreenImageData) return;
 
         const waterLevel = this.effectiveWaterMeters;
         ctx.clearRect(0, 0, 256, 256);
-
         if (waterLevel <= 0.1) return;
 
-        const offscreen = document.createElement('canvas');
-        offscreen.width = GRID_RES;
-        offscreen.height = GRID_RES;
-        const offCtx = offscreen.getContext('2d');
-        if (!offCtx) return;
-
-        const imgData = offCtx.createImageData(GRID_RES, GRID_RES);
-        const pixels = imgData.data;
+        const pixels = this.offscreenImageData.data;
+        pixels.fill(0);
 
         for (let r = 0; r < GRID_RES; r++) {
+            const rowOffset = r * GRID_RES;
             for (let c = 0; c < GRID_RES; c++) {
-                const idx = r * GRID_RES + c;
+                const idx = rowOffset + c;
                 const req = requiredLevelGrid[idx];
-
                 if (waterLevel < req) continue;
 
                 const depth = waterLevel - req;
                 const pIdx = idx * 4;
 
                 const isEdge =
-                    (r > 0 && waterLevel < requiredLevelGrid[(r - 1) * GRID_RES + c]) ||
-                    (r < GRID_RES - 1 &&
-                        waterLevel < requiredLevelGrid[(r + 1) * GRID_RES + c]) ||
-                    (c > 0 && waterLevel < requiredLevelGrid[r * GRID_RES + (c - 1)]) ||
-                    (c < GRID_RES - 1 &&
-                        waterLevel < requiredLevelGrid[r * GRID_RES + (c + 1)]);
+                    (r > 0 && waterLevel < requiredLevelGrid[idx - GRID_RES]) ||
+                    (r < GRID_RES - 1 && waterLevel < requiredLevelGrid[idx + GRID_RES]) ||
+                    (c > 0 && waterLevel < requiredLevelGrid[idx - 1]) ||
+                    (c < GRID_RES - 1 && waterLevel < requiredLevelGrid[idx + 1]);
 
                 if (isEdge) {
                     pixels[pIdx] = 29;
@@ -304,10 +315,10 @@ class TopographicFloodGridLayer extends L.GridLayer {
             }
         }
 
-        offCtx.putImageData(imgData, 0, 0);
+        this.offscreenCtx.putImageData(this.offscreenImageData, 0, 0);
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(offscreen, 0, 0, 256, 256);
+        ctx.drawImage(this.offscreenCanvas, 0, 0, 256, 256);
     }
 
     private tileCoordsToKey(coords: L.Coords): string {
@@ -340,7 +351,6 @@ export function FloodSimulationLayer({
             zIndex: 420,
             updateWhenIdle: false,
         });
-
         gridLayer.addTo(map);
         gridLayerRef.current = gridLayer;
 
@@ -358,8 +368,10 @@ export function FloodSimulationLayer({
         gridLayerRef.current?.setEffectiveWaterMeters(effectiveWaterRise);
     }, [effectiveWaterRise, hydroMesh]);
 
-    const mainRiverSegments: HydroWaterwaySegment[] =
-        hydroMesh?.segments.filter((s) => s.kind === 'river') ?? [];
+    const mainRiverSegments = useMemo<HydroWaterwaySegment[]>(
+        () => hydroMesh?.segments.filter((s) => s.kind === 'river') ?? [],
+        [hydroMesh]
+    );
 
     const selectedStreetId = inspectedDiagnostic?.street.id ?? null;
 
@@ -371,6 +383,7 @@ export function FloodSimulationLayer({
                     <span>Calculando malha topográfica e cotas das vias...</span>
                 </div>
             )}
+
             {mainRiverSegments.map((seg) => (
                 <Polyline
                     key={seg.id}
@@ -382,6 +395,7 @@ export function FloodSimulationLayer({
                     }}
                 />
             ))}
+
             {impactedStreets.map((item) => {
                 const isSelected = item.street.id === selectedStreetId;
                 const strokeColor = isSelected
@@ -418,6 +432,7 @@ export function FloodSimulationLayer({
                     </Polyline>
                 ));
             })}
+
             {inspectedDiagnostic &&
                 !inspectedDiagnostic.isFlooded &&
                 inspectedDiagnostic.street.polylines.map((poly, idx) => (
@@ -431,6 +446,7 @@ export function FloodSimulationLayer({
                         }}
                     />
                 ))}
+
             {inspectedDiagnostic && (
                 <CircleMarker
                     center={inspectedDiagnostic.street.focusPoint}
@@ -463,6 +479,7 @@ export function FloodSimulationLayer({
                     </Tooltip>
                 </CircleMarker>
             )}
+
             <CircleMarker
                 center={stationCoordinates}
                 radius={11}
